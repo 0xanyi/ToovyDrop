@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+
 import { ApiResponse } from '../types';
 import { adminService } from '../services/adminService';
+import Layout from '../components/Layout';
 import Button from '../components/Button';
 import UserList from '../components/admin/UserList';
 import UserForm from '../components/admin/UserForm';
@@ -17,7 +18,6 @@ import {
   FolderOpen,
   FileText,
   Activity,
-  LogOut,
   BarChart3,
   Shield,
   Database,
@@ -71,7 +71,7 @@ interface SystemHealth {
 }
 
 const AdminDashboard: React.FC = () => {
-  const { user, logout } = useAuth();
+
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'channels' | 'files' | 'analytics' | 'settings'>('overview');
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
@@ -152,9 +152,7 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleLogout = async () => {
-    await logout();
-  };
+
 
   // User management handlers
   const handleUserSelect = (user: any) => {
@@ -298,34 +296,7 @@ const AdminDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Admin Dashboard
-              </h1>
-              <p className="text-sm text-gray-600 mt-1">
-                System Management & Analytics
-              </p>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-700">
-                Admin: {user?.email}
-              </span>
-              <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
-                ADMIN
-              </span>
-              <Button variant="secondary" onClick={handleLogout}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <Layout>
 
       {/* Navigation tabs */}
       <div className="bg-white border-b border-gray-200">
@@ -677,7 +648,7 @@ const AdminDashboard: React.FC = () => {
           onSave={handleChannelUserAssignmentSave}
         />
       )}
-    </div>
+    </Layout>
   );
 };
 

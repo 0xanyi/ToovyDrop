@@ -10,6 +10,10 @@ import {
 } from '../types';
 
 export class FileService {
+  private get client() {
+    return apiService.client;
+  }
+
   async getFiles(
     page: number = 1,
     limit: number = 20,
@@ -141,9 +145,71 @@ export class FileService {
     return `${apiUrl}/api/files/${fileId}/${endpoint}`;
   }
 
-  generateThumbnailUrl(fileId: string): string {
+  async getThumbnailBlob(fileId: string, size: 'small' | 'medium' | 'large' = 'medium'): Promise<string> {
+    try {
+      const response = await this.client.get(`/files/${fileId}/thumbnail?size=${size}`, {
+        responseType: 'blob'
+      });
+
+      // Create blob URL for the image
+      const blob = new Blob([response.data]);
+      return window.URL.createObjectURL(blob);
+    } catch (error) {
+      throw new Error('Failed to load thumbnail');
+    }
+  }
+
+  async getFileServeBlob(fileId: string): Promise<string> {
+    try {
+      const response = await this.client.get(`/files/${fileId}/serve`, {
+        responseType: 'blob'
+      });
+
+      // Create blob URL for the file
+      const blob = new Blob([response.data]);
+      return window.URL.createObjectURL(blob);
+    } catch (error) {
+      throw new Error('Failed to load file');
+    }
+  }
+
+  generateThumbnailUrl(fileId: string, size: 'small' | 'medium' | 'large' = 'medium'): string {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    return `${apiUrl}/api/files/${fileId}/thumbnail`;
+    return `${apiUrl}/api/files/${fileId}/thumbnail?size=${size}`;
+  }
+
+  async getFileContentChunk(fileId: string, chunkIndex: number, chunkSize: number = 1024 * 1024): Promise<ArrayBuffer> {
+    const response = await apiService.client.get(`/files/${fileId}/content`, {
+      params: {
+        chunkIndex,
+        chunkSize,
+      },
+      responseType: 'arraybuffer',
+    });
+
+    return response.data;
+  }
+
+  async getFileMetadata(fileId: string): Promise<{
+    size: number;
+    mimeType: string;
+    supportsChunking: boolean;
+    chunkSize: number;
+    totalChunks: number;
+  }> {
+    const response: ApiResponse<{
+      size: number;
+      mimeType: string;
+      supportsChunking: boolean;
+      chunkSize: number;
+      totalChunks: number;
+    }> = await apiService.get(`/files/${fileId}/metadata`);
+
+    if (!response.success || !response.data) {
+      throw new Error(response.error?.message || 'Failed to fetch file metadata');
+    }
+
+    return response.data;
   }
 
   formatFileSize(bytes: number): string {

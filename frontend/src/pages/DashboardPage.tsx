@@ -1,18 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { File as FileType } from '../types';
-import Button from '../components/Button';
-import FileUpload from '../components/FileUpload';
-import FileList from '../components/FileList';
-import FilePreviewModal from '../components/FilePreview';
-import RenameFileModal from '../components/RenameFileModal';
+import Layout from '../components/Layout';
 import { fileService } from '../services/fileService';
-import { Upload, FolderOpen, Settings, LogOut, Shield } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Settings } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { useIsMobile } from '../hooks/useSwipeGestures';
+import { cn } from '../design-system/utils';
+
+// Lazy load heavy components
+const FileUpload = React.lazy(() => import('../components/FileUpload'));
+const EnhancedFileList = React.lazy(() => import('../components/EnhancedFileList'));
+const FilePreviewModal = React.lazy(() => import('../components/FilePreview'));
+const RenameFileModal = React.lazy(() => import('../components/RenameFileModal'));
 
 const DashboardPage: React.FC = () => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user, isAdmin } = useAuth();
+  const isMobile = useIsMobile();
+
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<'upload' | 'files'>('upload');
   const [selectedFile, setSelectedFile] = useState<FileType | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -21,8 +27,33 @@ const DashboardPage: React.FC = () => {
   const [renameModalOpen, setRenameModalOpen] = useState(false);
   const [fileToRename, setFileToRename] = useState<FileType | null>(null);
 
-  const handleLogout = async () => {
-    await logout();
+  // Handle tab changes from URL parameters
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    
+    // For admin users, redirect away from files tab to upload tab
+    if (isAdmin() && tab === 'files') {
+      setActiveTab('upload');
+      setSearchParams({ tab: 'upload' });
+      return;
+    }
+    
+    if (tab === 'upload' || (!isAdmin() && tab === 'files')) {
+      setActiveTab(tab);
+    } else {
+      // Default to upload tab if no tab is specified
+      setActiveTab('upload');
+      setSearchParams({ tab: 'upload' });
+    }
+  }, [searchParams, setSearchParams, isAdmin]);
+
+  const handleTabChange = (tab: 'upload' | 'files') => {
+    // Prevent admin users from accessing files tab
+    if (isAdmin() && tab === 'files') {
+      return;
+    }
+    setActiveTab(tab);
+    setSearchParams({ tab });
   };
 
   const handleFileSelect = (file: FileType) => {
@@ -49,9 +80,12 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-  const handleUploadComplete = (_fileId: string, _fileData: any) => {
-    // Refresh the file list when upload completes
-    setActiveTab('files');
+  const handleUploadComplete = (_fileId: string, _fileData: unknown) => {
+    // For regular users, refresh the file list when upload completes
+    // Admin users stay on upload tab since they don't have access to My Files
+    if (!isAdmin()) {
+      handleTabChange('files');
+    }
   };
 
   const handleNextFile = () => {
@@ -74,99 +108,52 @@ const DashboardPage: React.FC = () => {
   const defaultChannelId = userChannels.length > 0 ? userChannels[0].id : '';
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                ToovyDrop
-              </h1>
-              <p className="text-sm text-gray-600 mt-1">
-                Secure File Management Platform
-              </p>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-700">
-                Welcome, {user?.email}
-              </span>
-              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                {user?.role}
-              </span>
-              {user?.role === 'ADMIN' && (
-                <Button
-                  variant="secondary"
-                  onClick={() => navigate('/admin')}
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
-                >
-                  <Shield className="w-4 h-4 mr-2" />
-                  Admin
-                </Button>
-              )}
-              <Button variant="secondary" onClick={handleLogout}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <Layout>
 
-      {/* Navigation tabs */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8" aria-label="Tabs">
-            <button
-              onClick={() => setActiveTab('upload')}
-              className={`
-                py-4 px-1 border-b-2 font-medium text-sm transition-colors
-                ${activeTab === 'upload'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }
-              `}
-            >
-              <Upload className="w-4 h-4 inline-block mr-2" />
-              Upload Files
-            </button>
-            <button
-              onClick={() => setActiveTab('files')}
-              className={`
-                py-4 px-1 border-b-2 font-medium text-sm transition-colors
-                ${activeTab === 'files'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }
-              `}
-            >
-              <FolderOpen className="w-4 h-4 inline-block mr-2" />
-              My Files
-            </button>
-          </nav>
-        </div>
-      </div>
 
       {/* Main content */}
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
+      <main className={cn(
+        'max-w-7xl mx-auto',
+        isMobile ? 'py-4 px-4' : 'py-6 sm:px-6 lg:px-8'
+      )}>
+        <div className={cn(isMobile ? 'space-y-4' : 'px-4 py-6 sm:px-0')}>
           {activeTab === 'upload' && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            <div className={cn(isMobile ? 'space-y-4' : 'space-y-6')}>
+              <div className={cn(isMobile && 'text-center')}>
+                <h2 className={cn(
+                  'font-bold text-gray-900 mb-2',
+                  isMobile ? 'text-xl' : 'text-2xl'
+                )}>
                   Upload Files
                 </h2>
-                <p className="text-gray-600">
-                  Drag and drop files or click to select. Files are securely uploaded and stored.
+                <p className={cn(
+                  'text-gray-600',
+                  isMobile ? 'text-sm' : 'text-base'
+                )}>
+                  {isAdmin() ? (
+                    isMobile 
+                      ? 'As admin, select any channel and upload files'
+                      : 'As an administrator, you can upload files to any channel. Select the target channel below.'
+                  ) : (
+                    isMobile 
+                      ? 'Tap to select files or drag from other apps'
+                      : 'Drag and drop files or click to select. Files are securely uploaded and stored.'
+                  )}
                 </p>
               </div>
 
-              {userChannels.length > 0 ? (
-                <FileUpload
-                  channelId={defaultChannelId}
-                  channels={userChannels}
-                  onUploadComplete={handleUploadComplete}
-                />
+              {(userChannels.length > 0 || isAdmin()) ? (
+                <Suspense fallback={
+                  <div className="flex items-center justify-center h-64">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                  </div>
+                }>
+                  <FileUpload
+                    channelId={defaultChannelId}
+                    channels={userChannels}
+                    onUploadComplete={handleUploadComplete}
+                  />
+                </Suspense>
               ) : (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
                   <div className="flex">
@@ -189,24 +176,61 @@ const DashboardPage: React.FC = () => {
             </div>
           )}
 
-          {activeTab === 'files' && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          {activeTab === 'files' && isAdmin() && (
+            <div className={cn(isMobile ? 'space-y-4' : 'space-y-6')}>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <Settings className="h-5 w-5 text-blue-400" />
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-blue-800">
+                      Admin File Management
+                    </h3>
+                    <div className="mt-2 text-sm text-blue-700">
+                      <p>
+                        As an administrator, please use the "File Management" section in the admin panel to view and manage all files across channels.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'files' && !isAdmin() && (
+            <div className={cn(isMobile ? 'space-y-4' : 'space-y-6')}>
+              <div className={cn(isMobile && 'text-center')}>
+                <h2 className={cn(
+                  'font-bold text-gray-900 mb-2',
+                  isMobile ? 'text-xl' : 'text-2xl'
+                )}>
                   My Files
                 </h2>
-                <p className="text-gray-600">
-                  Browse, preview, download, and manage your uploaded files.
+                <p className={cn(
+                  'text-gray-600',
+                  isMobile ? 'text-sm' : 'text-base'
+                )}>
+                  {isMobile 
+                    ? 'Swipe left to preview, right to select'
+                    : 'Browse, preview, download, and manage your uploaded files.'
+                  }
                 </p>
               </div>
 
               {userChannels.length > 0 ? (
-                <FileList
-                  channelId={defaultChannelId}
-                  onFileSelect={handleFileSelect}
-                  onFilesChange={setAllFiles}
-                  onRename={handleRename}
-                />
+                <Suspense fallback={
+                  <div className="flex items-center justify-center h-64">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                  </div>
+                }>
+                  <EnhancedFileList
+                    channelId={defaultChannelId}
+                    onFileSelect={handleFileSelect}
+                    onFilesChange={setAllFiles}
+                    onRename={handleRename}
+                  />
+                </Suspense>
               ) : (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
                   <div className="flex">
@@ -232,27 +256,31 @@ const DashboardPage: React.FC = () => {
       </main>
 
       {/* File preview modal */}
-      <FilePreviewModal
-        file={selectedFile}
-        isOpen={isPreviewOpen}
-        onClose={() => setIsPreviewOpen(false)}
-        onNext={handleNextFile}
-        onPrevious={handlePreviousFile}
-        hasNext={currentFileIndex < allFiles.length - 1}
-        hasPrevious={currentFileIndex > 0}
-      />
+      <Suspense fallback={null}>
+        <FilePreviewModal
+          file={selectedFile}
+          isOpen={isPreviewOpen}
+          onClose={() => setIsPreviewOpen(false)}
+          onNext={handleNextFile}
+          onPrevious={handlePreviousFile}
+          hasNext={currentFileIndex < allFiles.length - 1}
+          hasPrevious={currentFileIndex > 0}
+        />
+      </Suspense>
 
       {/* Rename modal */}
-      <RenameFileModal
-        isOpen={renameModalOpen}
-        currentName={fileToRename?.originalName || ''}
-        onClose={() => {
-          setRenameModalOpen(false);
-          setFileToRename(null);
-        }}
-        onRename={handleRenameSubmit}
-      />
-    </div>
+      <Suspense fallback={null}>
+        <RenameFileModal
+          isOpen={renameModalOpen}
+          currentName={fileToRename?.originalName || ''}
+          onClose={() => {
+            setRenameModalOpen(false);
+            setFileToRename(null);
+          }}
+          onRename={handleRenameSubmit}
+        />
+      </Suspense>
+    </Layout>
   );
 };
 

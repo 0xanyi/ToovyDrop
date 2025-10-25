@@ -10,6 +10,11 @@ import {
   downloadFile,
   deleteFile,
   renameFile,
+  getFilePreview,
+  serveFilePreview,
+  getFileThumbnail,
+  getFileMetadata,
+  getFileContentChunk,
   uploadMiddleware,
 } from '../controllers/fileController';
 
@@ -27,6 +32,11 @@ router.delete('/upload/:uploadId/cancel', cancelUpload);
 // File management routes
 router.get('/', listFiles);
 router.get('/search', searchFiles);
+router.get('/:fileId/preview', getFilePreview);
+router.get('/:fileId/serve', serveFilePreview);
+router.get('/:fileId/thumbnail', getFileThumbnail);
+router.get('/:fileId/metadata', getFileMetadata);
+router.get('/:fileId/content', getFileContentChunk);
 router.get('/:fileId/download', downloadFile);
 router.patch('/:fileId/rename', renameFile);
 router.delete('/:fileId', deleteFile);

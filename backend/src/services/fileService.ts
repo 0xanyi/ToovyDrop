@@ -3,6 +3,7 @@ import * as ftp from 'basic-ftp';
 import fs from 'fs-extra';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import sharp from 'sharp';
 import logger from '../utils/logger';
 import { validateDirectoryPath, sanitizeFilename } from '../utils/fileValidation';
 
@@ -463,6 +464,325 @@ export class FileService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  /**
+   * Gets file preview information
+   */
+  async getFilePreview(fileId: string, userId: string): Promise<{
+    type: 'image' | 'video' | 'audio' | 'pdf' | 'text' | 'unsupported';
+    url: string;
+    metadata?: {
+      dimensions?: { width: number; height: number };
+      duration?: number;
+      pages?: number;
+    };
+  }> {
+    try {
+      // Get file information
+      const file = await this.prisma.file.findUnique({
+        where: { id: fileId },
+        include: { channel: true },
+      });
+
+      if (!file) {
+        throw new Error('File not found');
+      }
+
+      // Check user permissions
+      const userChannel = await this.prisma.userChannel.findFirst({
+        where: { userId, channelId: file.channelId },
+      });
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!userChannel && user?.role !== 'ADMIN') {
+        throw new Error('Access denied to preview this file');
+      }
+
+      // Determine preview type based on MIME type
+      const mimeType = file.mimeType || '';
+      let previewType: 'image' | 'video' | 'audio' | 'pdf' | 'text' | 'unsupported' = 'unsupported';
+
+      if (mimeType.startsWith('image/')) {
+        previewType = 'image';
+      } else if (mimeType.startsWith('video/')) {
+        previewType = 'video';
+      } else if (mimeType.startsWith('audio/')) {
+        previewType = 'audio';
+      } else if (mimeType === 'application/pdf') {
+        previewType = 'pdf';
+      } else if (mimeType.startsWith('text/') || 
+                 mimeType === 'application/json' ||
+                 mimeType === 'application/javascript' ||
+                 mimeType === 'text/html' ||
+                 mimeType === 'text/css') {
+        previewType = 'text';
+      }
+
+      if (previewType === 'unsupported') {
+        throw new Error('File type not supported for preview');
+      }
+
+      // Generate preview URL - this will point to our secure file serving endpoint
+      const baseUrl = process.env.API_BASE_URL || 'http://localhost:3000';
+      const previewUrl = `${baseUrl}/api/files/${fileId}/serve`;
+
+      return {
+        type: previewType,
+        url: previewUrl,
+        metadata: {
+          // For now, we'll return basic metadata
+          // In the future, we could extract more detailed metadata from files
+        },
+      };
+    } catch (error) {
+      logger.error('Error getting file preview:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generates and caches a thumbnail for an image file
+   */
+  async generateThumbnail(
+    fileId: string, 
+    userId: string, 
+    size: 'small' | 'medium' | 'large' = 'medium'
+  ): Promise<{ filePath: string; mimeType: string } | null> {
+    try {
+      // Get file information
+      const file = await this.prisma.file.findUnique({
+        where: { id: fileId },
+        include: { channel: true },
+      });
+
+      if (!file) {
+        throw new Error('File not found');
+      }
+
+      // Check user permissions
+      const userChannel = await this.prisma.userChannel.findFirst({
+        where: { userId, channelId: file.channelId },
+      });
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!userChannel && user?.role !== 'ADMIN') {
+        throw new Error('Access denied to this file');
+      }
+
+      // Check if file is an image
+      if (!file.mimeType || !file.mimeType.startsWith('image/')) {
+        return null; // Not an image, no thumbnail available
+      }
+
+      // Define thumbnail sizes
+      const thumbnailSizes = {
+        small: { width: 150, height: 150 },
+        medium: { width: 300, height: 300 },
+        large: { width: 600, height: 600 },
+      };
+
+      const thumbnailSize = thumbnailSizes[size];
+      
+      // Create thumbnails directory
+      const thumbnailsDir = path.join(process.cwd(), 'temp', 'thumbnails');
+      await fs.ensureDir(thumbnailsDir);
+      
+      // Check if thumbnail already exists
+      const thumbnailFilename = `${fileId}_${size}.webp`;
+      const thumbnailPath = path.join(thumbnailsDir, thumbnailFilename);
+      
+      if (await fs.pathExists(thumbnailPath)) {
+        logger.info(`Thumbnail already exists: ${thumbnailPath}`);
+        return {
+          filePath: thumbnailPath,
+          mimeType: 'image/webp',
+        };
+      }
+
+      // Download original file from FTP
+      const tempDir = path.join(process.cwd(), 'temp', 'downloads');
+      await fs.ensureDir(tempDir);
+      const tempFilePath = path.join(tempDir, `${fileId}_original`);
+
+      await this.connectToFtp();
+      
+      try {
+        await this.ftpClient.downloadTo(tempFilePath, file.ftpPath);
+        logger.info(`Downloaded file for thumbnail generation: ${file.ftpPath}`);
+      } catch (error) {
+        logger.error('Error downloading file for thumbnail:', error);
+        throw new Error('Failed to download file for thumbnail generation');
+      } finally {
+        await this.disconnectFromFtp();
+      }
+
+      // Generate thumbnail using Sharp
+      try {
+        await sharp(tempFilePath)
+          .resize(thumbnailSize.width, thumbnailSize.height, {
+            fit: 'cover',
+            position: 'center',
+          })
+          .webp({ quality: 80 })
+          .toFile(thumbnailPath);
+
+        logger.info(`Generated thumbnail: ${thumbnailPath}`);
+
+        // Clean up original temp file
+        await fs.remove(tempFilePath);
+
+        return {
+          filePath: thumbnailPath,
+          mimeType: 'image/webp',
+        };
+      } catch (error) {
+        logger.error('Error generating thumbnail with Sharp:', error);
+        // Clean up temp files
+        await fs.remove(tempFilePath).catch(() => {});
+        throw new Error('Failed to generate thumbnail');
+      }
+    } catch (error) {
+      logger.error('Error in generateThumbnail:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets file metadata for progressive loading
+   */
+  async getFileMetadata(fileId: string, userId: string): Promise<{
+    size: number;
+    mimeType: string;
+    supportsChunking: boolean;
+    chunkSize: number;
+    totalChunks: number;
+  }> {
+    try {
+      // Get file information
+      const file = await this.prisma.file.findUnique({
+        where: { id: fileId },
+      });
+
+      if (!file) {
+        throw new Error('File not found');
+      }
+
+      // Check user permissions
+      const userChannel = await this.prisma.userChannel.findFirst({
+        where: { userId, channelId: file.channelId },
+      });
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!userChannel && user?.role !== 'ADMIN') {
+        throw new Error('Access denied to this file');
+      }
+
+      const fileSize = Number(file.size);
+      const chunkSize = 1024 * 1024; // 1MB chunks
+      const totalChunks = Math.ceil(fileSize / chunkSize);
+      
+      // Determine if file supports chunking (large files benefit from it)
+      const supportsChunking = fileSize > chunkSize;
+
+      return {
+        size: fileSize,
+        mimeType: file.mimeType || 'application/octet-stream',
+        supportsChunking,
+        chunkSize,
+        totalChunks,
+      };
+    } catch (error) {
+      logger.error('Error getting file metadata:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets a specific chunk of file content for progressive loading
+   */
+  async getFileContentChunk(
+    fileId: string, 
+    chunkIndex: number, 
+    chunkSize: number,
+    userId: string
+  ): Promise<Buffer> {
+    try {
+      // Get file information
+      const file = await this.prisma.file.findUnique({
+        where: { id: fileId },
+      });
+
+      if (!file) {
+        throw new Error('File not found');
+      }
+
+      // Check user permissions
+      const userChannel = await this.prisma.userChannel.findFirst({
+        where: { userId, channelId: file.channelId },
+      });
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!userChannel && user?.role !== 'ADMIN') {
+        throw new Error('Access denied to this file');
+      }
+
+      // Download file from FTP to temp location
+      const tempDir = path.join(process.cwd(), 'temp', 'chunks');
+      await fs.ensureDir(tempDir);
+      const tempFilePath = path.join(tempDir, `${fileId}_chunk_${chunkIndex}`);
+
+      // Check if chunk is already cached
+      if (await fs.pathExists(tempFilePath)) {
+        return await fs.readFile(tempFilePath);
+      }
+
+      // Download full file first (in production, you might want to implement FTP range requests)
+      const fullTempPath = path.join(tempDir, `${fileId}_full`);
+      
+      if (!(await fs.pathExists(fullTempPath))) {
+        await this.connectToFtp();
+        try {
+          await this.ftpClient.downloadTo(fullTempPath, file.ftpPath);
+        } finally {
+          await this.disconnectFromFtp();
+        }
+      }
+
+      // Extract the specific chunk
+      const startByte = chunkIndex * chunkSize;
+      const endByte = Math.min(startByte + chunkSize, Number(file.size));
+      
+      // Read the specific chunk from the file
+      const buffer = Buffer.alloc(endByte - startByte);
+      const fileDescriptor = await fs.open(fullTempPath, 'r');
+      
+      try {
+        await fs.read(fileDescriptor, buffer, 0, buffer.length, startByte);
+        
+        // Cache the chunk
+        await fs.writeFile(tempFilePath, buffer);
+        
+        return buffer;
+      } finally {
+        await fs.close(fileDescriptor);
+      }
+    } catch (error) {
+      logger.error('Error getting file content chunk:', error);
+      throw error;
+    }
   }
 
   /**

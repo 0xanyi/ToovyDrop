@@ -1,3 +1,5 @@
+import { colors, typography, spacing, borderRadius, boxShadow, animation, zIndex, breakpoints } from './src/design-system/tokens.js';
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -6,20 +8,27 @@ export default {
   ],
   theme: {
     extend: {
-      colors: {
-        primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
-        },
+      colors,
+      fontFamily: typography.fontFamily,
+      fontSize: typography.fontSize,
+      fontWeight: typography.fontWeight,
+      letterSpacing: typography.letterSpacing,
+      spacing,
+      borderRadius,
+      boxShadow,
+      transitionDuration: animation.duration,
+      transitionTimingFunction: animation.easing,
+      zIndex,
+      screens: breakpoints,
+      keyframes: {
+        shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' }
+        }
       },
+      animation: {
+        shimmer: 'shimmer 2s infinite linear'
+      }
     },
   },
   plugins: [],
