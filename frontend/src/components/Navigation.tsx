@@ -9,7 +9,6 @@ import {
   FolderOpen, 
   Menu, 
   X,
-  Home,
   Users,
   FileText,
   Activity,
@@ -26,12 +25,6 @@ interface NavigationItem {
 }
 
 const navigationItems: NavigationItem[] = [
-  {
-    id: 'dashboard',
-    label: 'Dashboard',
-    icon: Home,
-    path: '/dashboard',
-  },
   {
     id: 'upload',
     label: 'Upload Files',
@@ -150,9 +143,6 @@ const Navigation: React.FC<NavigationProps> = ({ className }) => {
   });
 
   const isActiveItem = (item: NavigationItem) => {
-    if (item.path === '/dashboard') {
-      return location.pathname === '/dashboard' && !location.search;
-    }
     if (item.path.includes('?tab=')) {
       const [path, query] = item.path.split('?');
       return location.pathname === path && location.search.includes(query);

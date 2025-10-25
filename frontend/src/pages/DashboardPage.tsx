@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { File as FileType } from '../types';
 import Layout from '../components/Layout';
 import { fileService } from '../services/fileService';
-import { Upload, FolderOpen, Settings } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useIsMobile } from '../hooks/useSwipeGestures';
 import { cn } from '../design-system/utils';
@@ -32,8 +32,12 @@ const DashboardPage: React.FC = () => {
     const tab = searchParams.get('tab');
     if (tab === 'upload' || tab === 'files') {
       setActiveTab(tab);
+    } else {
+      // Default to upload tab if no tab is specified
+      setActiveTab('upload');
+      setSearchParams({ tab: 'upload' });
     }
-  }, [searchParams]);
+  }, [searchParams, setSearchParams]);
 
   const handleTabChange = (tab: 'upload' | 'files') => {
     setActiveTab(tab);
@@ -90,44 +94,7 @@ const DashboardPage: React.FC = () => {
 
   return (
     <Layout>
-      {/* Navigation tabs */}
-      <div className="bg-white border-b border-gray-200 safe-top">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className={cn(
-            'flex',
-            isMobile ? 'space-x-4' : 'space-x-8'
-          )} aria-label="Tabs">
-            <button
-              onClick={() => handleTabChange('upload')}
-              className={cn(
-                'border-b-2 font-medium transition-colors',
-                'touch-target-comfortable flex items-center justify-center',
-                isMobile ? 'py-3 px-2 text-sm' : 'py-4 px-1 text-sm',
-                activeTab === 'upload'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              )}
-            >
-              <Upload className={cn('inline-block mr-2', isMobile ? 'w-5 h-5' : 'w-4 h-4')} />
-              {isMobile ? 'Upload' : 'Upload Files'}
-            </button>
-            <button
-              onClick={() => handleTabChange('files')}
-              className={cn(
-                'border-b-2 font-medium transition-colors',
-                'touch-target-comfortable flex items-center justify-center',
-                isMobile ? 'py-3 px-2 text-sm' : 'py-4 px-1 text-sm',
-                activeTab === 'files'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              )}
-            >
-              <FolderOpen className={cn('inline-block mr-2', isMobile ? 'w-5 h-5' : 'w-4 h-4')} />
-              {isMobile ? 'Files' : 'My Files'}
-            </button>
-          </nav>
-        </div>
-      </div>
+
 
       {/* Main content */}
       <main className={cn(

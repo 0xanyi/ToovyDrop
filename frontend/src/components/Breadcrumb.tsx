@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { cn, flex } from '../design-system/utils';
-import { ChevronRight, Home } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 
 interface BreadcrumbItem {
   label: string;
@@ -25,9 +25,7 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className }) => {
     const searchParams = new URLSearchParams(location.search);
     const tab = searchParams.get('tab');
 
-    const breadcrumbItems: BreadcrumbItem[] = [
-      { label: 'Home', path: '/dashboard' }
-    ];
+    const breadcrumbItems: BreadcrumbItem[] = [];
 
     // Handle dashboard with tabs
     if (pathSegments[0] === 'dashboard') {
@@ -36,7 +34,8 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className }) => {
       } else if (tab === 'files') {
         breadcrumbItems.push({ label: 'My Files', isActive: true });
       } else {
-        breadcrumbItems[0].isActive = true;
+        // Default dashboard view - redirect to upload
+        breadcrumbItems.push({ label: 'Upload Files', isActive: true });
       }
     }
     // Handle admin routes
@@ -82,9 +81,7 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className }) => {
                 <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
               )}
               
-              {index === 0 && (
-                <Home className="w-4 h-4 text-gray-400 flex-shrink-0" />
-              )}
+
 
               {item.path && !isActive ? (
                 <Link

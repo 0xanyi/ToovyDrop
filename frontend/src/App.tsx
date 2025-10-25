@@ -121,7 +121,7 @@ const AppRoutes: React.FC = () => {
               </AdminRoute>
             }
           />
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<Navigate to="/dashboard?tab=upload" replace />} />
         </Routes>
       </Suspense>
       <AppToaster />
