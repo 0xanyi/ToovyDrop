@@ -550,6 +550,10 @@ export class UploadService {
       .filter(upload => upload.status === 'error');
   }
 
+  getFileData(uploadId: string): { file: File; channelId: string } | undefined {
+    return this.fileDataMap.get(uploadId);
+  }
+
   clearCompleted(): void {
     const completedIds = Array.from(this.queue.files.entries())
       .filter(([_, upload]) => upload.status === 'completed')

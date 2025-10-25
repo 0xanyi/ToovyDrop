@@ -6,6 +6,7 @@ import { UploadService } from '../services/uploadService';
 import { websocketService } from '../services/websocketService';
 import malwareScanner from '../services/malwareScanner';
 import auditService from '../services/auditService';
+import CacheService from '../services/cacheService';
 import logger from '../utils/logger';
 import Joi from 'joi';
 import { AuthenticatedRequest } from '../middleware/auth';
@@ -557,6 +558,355 @@ export const deleteFile = async (req: AuthenticatedRequest, res: Response) => {
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to delete file',
+    });
+  }
+};
+
+/**
+ * Get file preview with caching
+ */
+export const getFilePreview = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { fileId } = req.params;
+    const userId = req.user!.id;
+
+    // Try to get from cache first
+    let previewData = await CacheService.getCachedFilePreview(fileId);
+    
+    if (!previewData) {
+      const fileSvc = await getFileService();
+      previewData = await fileSvc.getFilePreview(fileId, userId);
+      
+      // Cache the preview data
+      await CacheService.getFilePreview(fileId, previewData);
+    }
+
+    // Set caching headers
+    const maxAge = 2 * 60 * 60; // 2 hours
+    res.setHeader('Cache-Control', `public, max-age=${maxAge}`);
+    res.setHeader('ETag', `"${fileId}-preview"`);
+
+    // Check if client has cached version
+    const clientETag = req.headers['if-none-match'];
+    if (clientETag === `"${fileId}-preview"`) {
+      return res.status(304).end();
+    }
+
+    res.json({
+      success: true,
+      data: previewData,
+    });
+  } catch (error) {
+    logger.error('Error getting file preview:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get file preview',
+    });
+  }
+};
+
+/**
+ * Serve file for preview with enhanced caching (secure file serving)
+ */
+export const serveFilePreview = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { fileId } = req.params;
+    const userId = req.user!.id;
+
+    const fileSvc = await getFileService();
+    const fileInfo = await fileSvc.downloadFromFtp(fileId, userId);
+
+    // Get file stats for ETag and Last-Modified headers
+    const fileStats = await fs.promises.stat(fileInfo.filePath);
+    const etag = `"${fileId}-${fileStats.mtime.getTime()}"`;
+    const lastModified = fileStats.mtime.toUTCString();
+
+    // Enhanced caching headers based on file type
+    const isImage = fileInfo.mimeType.startsWith('image/');
+    const isVideo = fileInfo.mimeType.startsWith('video/');
+    const isAudio = fileInfo.mimeType.startsWith('audio/');
+    const isDocument = fileInfo.mimeType === 'application/pdf' || fileInfo.mimeType.includes('document');
+
+    let cacheMaxAge = 3600; // 1 hour default
+    if (isImage || isDocument) {
+      cacheMaxAge = 24 * 60 * 60; // 24 hours for images and documents
+    } else if (isVideo || isAudio) {
+      cacheMaxAge = 12 * 60 * 60; // 12 hours for media files
+    }
+
+    // Set appropriate headers for file serving with enhanced caching
+    res.setHeader('Content-Type', fileInfo.mimeType);
+    res.setHeader('Content-Disposition', `inline; filename="${fileInfo.filename}"`);
+    res.setHeader('Cache-Control', `private, max-age=${cacheMaxAge}`);
+    res.setHeader('ETag', etag);
+    res.setHeader('Last-Modified', lastModified);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Length', fileStats.size.toString());
+    res.setHeader('Accept-Ranges', 'bytes');
+    
+    // Add CORS headers for file serving
+    const origin = req.headers.origin;
+    const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173'];
+    
+    if (origin && allowedOrigins.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Expose-Headers', 'ETag, Last-Modified, Content-Length, Accept-Ranges');
+    }
+
+    // Check if client has cached version
+    const clientETag = req.headers['if-none-match'];
+    const clientModifiedSince = req.headers['if-modified-since'];
+    
+    if (clientETag === etag || (clientModifiedSince && new Date(clientModifiedSince) >= fileStats.mtime)) {
+      return res.status(304).end();
+    }
+
+    // Handle range requests for large files (especially video/audio)
+    const range = req.headers.range;
+    if (range && (isVideo || isAudio)) {
+      const parts = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileStats.size - 1;
+      const chunksize = (end - start) + 1;
+
+      res.status(206);
+      res.setHeader('Content-Range', `bytes ${start}-${end}/${fileStats.size}`);
+      res.setHeader('Content-Length', chunksize.toString());
+
+      const fileStream = fs.createReadStream(fileInfo.filePath, { start, end });
+      fileStream.pipe(res);
+      
+      fileStream.on('end', () => {
+        // Clean up temporary file after streaming
+        fs.unlink(fileInfo.filePath, (unlinkErr) => {
+          if (unlinkErr) {
+            logger.error('Error cleaning up temporary file:', unlinkErr);
+          }
+        });
+      });
+      
+      return;
+    }
+
+    // Stream the full file
+    const fileStream = fs.createReadStream(fileInfo.filePath);
+    
+    fileStream.on('error', (error) => {
+      logger.error('Error streaming file:', error);
+      if (!res.headersSent) {
+        res.status(500).json({
+          success: false,
+          error: 'Error serving file',
+        });
+      }
+    });
+
+    fileStream.on('end', () => {
+      // Clean up temporary file after streaming
+      fs.unlink(fileInfo.filePath, (unlinkErr) => {
+        if (unlinkErr) {
+          logger.error('Error cleaning up temporary file:', unlinkErr);
+        }
+      });
+    });
+
+    fileStream.pipe(res);
+  } catch (error) {
+    logger.error('Error serving file preview:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to serve file preview',
+    });
+  }
+};
+
+/**
+ * Generate and serve file thumbnail with enhanced caching
+ */
+export const getFileThumbnail = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { fileId } = req.params;
+    const { size = 'medium' } = req.query;
+    const userId = req.user!.id;
+
+    // Validate size parameter
+    const validSizes = ['small', 'medium', 'large'];
+    const thumbnailSize = validSizes.includes(size as string) ? size as 'small' | 'medium' | 'large' : 'medium';
+
+    const fileSvc = await getFileService();
+    const thumbnailInfo = await fileSvc.generateThumbnail(fileId, userId, thumbnailSize);
+
+    if (!thumbnailInfo) {
+      return res.status(404).json({
+        success: false,
+        error: 'Thumbnail not available for this file type',
+      });
+    }
+
+    // Enhanced caching headers for thumbnails
+    const maxAge = 7 * 24 * 60 * 60; // 7 days
+    res.setHeader('Content-Type', thumbnailInfo.mimeType);
+    res.setHeader('Cache-Control', `public, max-age=${maxAge}, immutable`);
+    res.setHeader('ETag', `"${fileId}-${thumbnailSize}"`);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Vary', 'Accept-Encoding');
+    
+    // Add CORS headers for thumbnail serving
+    const origin = req.headers.origin;
+    const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173'];
+    
+    if (origin && allowedOrigins.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Expose-Headers', 'ETag, Cache-Control');
+    }
+
+    // Check if client has cached version
+    const clientETag = req.headers['if-none-match'];
+    if (clientETag === `"${fileId}-${thumbnailSize}"`) {
+      return res.status(304).end();
+    }
+
+    // Stream the thumbnail
+    const thumbnailStream = fs.createReadStream(thumbnailInfo.filePath);
+    
+    thumbnailStream.on('error', (error) => {
+      logger.error('Error streaming thumbnail:', error);
+      if (!res.headersSent) {
+        res.status(500).json({
+          success: false,
+          error: 'Error serving thumbnail',
+        });
+      }
+    });
+
+    thumbnailStream.on('end', () => {
+      // Don't clean up thumbnail files - they are cached for reuse
+    });
+
+    thumbnailStream.pipe(res);
+  } catch (error) {
+    logger.error('Error serving file thumbnail:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to serve file thumbnail',
+    });
+  }
+};
+
+/**
+ * Get file metadata for progressive loading with caching
+ */
+export const getFileMetadata = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { fileId } = req.params;
+    const userId = req.user!.id;
+
+    // Import prisma dynamically
+    const { prisma } = await import('../app');
+
+    // Try to get from cache first
+    let metadata = await CacheService.getFileMetadata(fileId, prisma);
+    
+    if (!metadata) {
+      const fileSvc = await getFileService();
+      metadata = await fileSvc.getFileMetadata(fileId, userId);
+    }
+
+    // Set enhanced caching headers for metadata
+    const maxAge = 3600; // 1 hour
+    res.setHeader('Cache-Control', `public, max-age=${maxAge}`);
+    res.setHeader('ETag', `"${fileId}-metadata"`);
+    res.setHeader('Vary', 'Accept-Encoding');
+
+    // Check if client has cached version
+    const clientETag = req.headers['if-none-match'];
+    if (clientETag === `"${fileId}-metadata"`) {
+      return res.status(304).end();
+    }
+
+    res.json({
+      success: true,
+      data: metadata,
+    });
+  } catch (error) {
+    logger.error('Error getting file metadata:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get file metadata',
+    });
+  }
+};
+
+/**
+ * Get file content chunk for progressive loading with caching
+ */
+export const getFileContentChunk = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { fileId } = req.params;
+    const { chunkIndex, chunkSize = 1024 * 1024 } = req.query;
+    const userId = req.user!.id;
+
+    // Validate parameters
+    const chunkIdx = parseInt(chunkIndex as string, 10);
+    const chunkSz = parseInt(chunkSize as string, 10);
+
+    if (isNaN(chunkIdx) || chunkIdx < 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid chunk index',
+      });
+    }
+
+    if (isNaN(chunkSz) || chunkSz <= 0 || chunkSz > 10 * 1024 * 1024) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid chunk size (max 10MB)',
+      });
+    }
+
+    // Try to get from cache first
+    let chunkData = await CacheService.getCachedContentChunk(fileId, chunkIdx);
+    
+    if (!chunkData) {
+      const fileSvc = await getFileService();
+      chunkData = await fileSvc.getFileContentChunk(fileId, chunkIdx, chunkSz, userId);
+      
+      // Cache the chunk for future requests
+      await CacheService.cacheContentChunk(fileId, chunkIdx, chunkData);
+    }
+
+    // Enhanced caching headers for chunks
+    const maxAge = 24 * 60 * 60; // 24 hours
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Cache-Control', `public, max-age=${maxAge}, immutable`);
+    res.setHeader('ETag', `"${fileId}-chunk-${chunkIdx}"`);
+    res.setHeader('Content-Length', chunkData.length.toString());
+    res.setHeader('Vary', 'Accept-Encoding');
+    
+    // Add CORS headers
+    const origin = req.headers.origin;
+    const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173'];
+    
+    if (origin && allowedOrigins.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Expose-Headers', 'ETag, Cache-Control, Content-Length');
+    }
+
+    // Check if client has cached version
+    const clientETag = req.headers['if-none-match'];
+    if (clientETag === `"${fileId}-chunk-${chunkIdx}"`) {
+      return res.status(304).end();
+    }
+
+    res.send(chunkData);
+  } catch (error) {
+    logger.error('Error getting file content chunk:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get file content chunk',
     });
   }
 };

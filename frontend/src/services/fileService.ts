@@ -141,9 +141,43 @@ export class FileService {
     return `${apiUrl}/api/files/${fileId}/${endpoint}`;
   }
 
-  generateThumbnailUrl(fileId: string): string {
+  generateThumbnailUrl(fileId: string, size: 'small' | 'medium' | 'large' = 'medium'): string {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    return `${apiUrl}/api/files/${fileId}/thumbnail`;
+    return `${apiUrl}/api/files/${fileId}/thumbnail?size=${size}`;
+  }
+
+  async getFileContentChunk(fileId: string, chunkIndex: number, chunkSize: number = 1024 * 1024): Promise<ArrayBuffer> {
+    const response = await apiService.client.get(`/files/${fileId}/content`, {
+      params: {
+        chunkIndex,
+        chunkSize,
+      },
+      responseType: 'arraybuffer',
+    });
+
+    return response.data;
+  }
+
+  async getFileMetadata(fileId: string): Promise<{
+    size: number;
+    mimeType: string;
+    supportsChunking: boolean;
+    chunkSize: number;
+    totalChunks: number;
+  }> {
+    const response: ApiResponse<{
+      size: number;
+      mimeType: string;
+      supportsChunking: boolean;
+      chunkSize: number;
+      totalChunks: number;
+    }> = await apiService.get(`/files/${fileId}/metadata`);
+
+    if (!response.success || !response.data) {
+      throw new Error(response.error?.message || 'Failed to fetch file metadata');
+    }
+
+    return response.data;
   }
 
   formatFileSize(bytes: number): string {
