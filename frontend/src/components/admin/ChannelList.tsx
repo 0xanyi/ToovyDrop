@@ -109,6 +109,13 @@ const ChannelList: React.FC<ChannelListProps> = ({
     fetchChannels();
   }, [refreshTrigger]);
 
+  // Also refresh when filters change
+  useEffect(() => {
+    if (refreshTrigger > 0) {
+      fetchChannels();
+    }
+  }, [statusFilter, sortBy, sortOrder]);
+
   // Handle search
   const handleSearch = () => {
     setPagination(prev => ({ ...prev, page: 1 }));

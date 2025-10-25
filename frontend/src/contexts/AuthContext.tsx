@@ -6,6 +6,7 @@ interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, role?: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   isAdmin: () => boolean;
   isChannelUser: () => boolean;
 }
@@ -173,11 +174,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return state.user?.role === 'CHANNEL_USER';
   };
 
+  const refreshUser = async (): Promise<void> => {
+    try {
+      const response = await authService.getCurrentUser();
+      if (response.success && response.data) {
+        const user = response.data.user;
+        
+        // Update localStorage
+        localStorage.setItem('user', JSON.stringify(user));
+        
+        dispatch({
+          type: 'SET_USER',
+          payload: user,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to refresh user data:', error);
+    }
+  };
+
   const value: AuthContextType = {
     ...state,
     login,
     register,
     logout,
+    refreshUser,
     isAdmin,
     isChannelUser,
   };

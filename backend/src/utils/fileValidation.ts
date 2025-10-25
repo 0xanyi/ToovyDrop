@@ -152,11 +152,13 @@ export function validateDirectoryPath(directoryPath: string): FileValidationResu
     };
   }
   
-  // Check for absolute paths
-  if (path.isAbsolute(directoryPath)) {
+  // Allow both absolute and relative paths for FTP
+  // FTP servers typically use absolute paths like /uploads/channel-name
+  // Just ensure the path doesn't contain dangerous characters
+  if (directoryPath.includes('\0') || directoryPath.includes('\r') || directoryPath.includes('\n')) {
     return {
       isValid: false,
-      error: 'Absolute paths not allowed in directory names',
+      error: 'Invalid directory path: contains illegal characters',
     };
   }
   

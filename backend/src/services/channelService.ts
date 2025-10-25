@@ -2,12 +2,41 @@ import { PrismaClient } from '@prisma/client';
 import { ApiResponse, ErrorCode } from '../types';
 import { generateSlug } from '../utils/helpers';
 import CacheService from './cacheService';
+import * as ftp from 'basic-ftp';
+import logger from '../utils/logger';
 
 export class ChannelService {
   constructor(private prisma: PrismaClient) {
     console.log('ChannelService constructor called');
     console.log('Prisma client received:', !!prisma);
     console.log('Prisma channel model:', !!prisma?.channel);
+  }
+
+  /**
+   * Create FTP directory for a channel
+   */
+  private async createFtpDirectory(ftpPath: string): Promise<void> {
+    const client = new ftp.Client();
+    client.ftp.verbose = process.env.NODE_ENV === 'development';
+
+    try {
+      await client.access({
+        host: process.env.FTP_HOST!,
+        user: process.env.FTP_USER!,
+        password: process.env.FTP_PASSWORD!,
+        port: parseInt(process.env.FTP_PORT || '21'),
+        secure: process.env.FTP_SECURE === 'true',
+      });
+
+      logger.info(`Creating FTP directory: ${ftpPath}`);
+      await client.ensureDir(ftpPath);
+      logger.info(`Successfully created FTP directory: ${ftpPath}`);
+    } catch (error) {
+      logger.error(`Failed to create FTP directory ${ftpPath}:`, error);
+      throw new Error(`Failed to create FTP directory: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      client.close();
+    }
   }
 
   /**
@@ -40,7 +69,22 @@ export class ChannelService {
       }
 
       const slug = generateSlug(data.name);
-      const ftpPath = data.ftpPath || `/channels/${slug}`;
+      const ftpPath = data.ftpPath || `/uploads/${slug}`;
+
+      // Create FTP directory first
+      try {
+        await this.createFtpDirectory(ftpPath);
+      } catch (error) {
+        logger.error('Failed to create FTP directory for channel:', error);
+        return {
+          success: false,
+          error: {
+            code: ErrorCode.INTERNAL_ERROR,
+            message: 'Failed to create FTP directory for channel',
+            details: error instanceof Error ? error.message : 'Unknown error'
+          }
+        };
+      }
 
       const channel = await this.prisma.channel.create({
         data: {
@@ -139,7 +183,7 @@ export class ChannelService {
   /**
    * Get channel by ID
    */
-  async getChannelById(id: string, userId?: string): Promise<ApiResponse<{ channel: import('@prisma/client').Channel & { files: import('@prisma/client').File[]; _count: { files: number; guestUploadLinks: number } } }>> {
+  async getChannelById(id: string, userId?: string): Promise<ApiResponse<{ channel: import('@prisma/client').Channel & { files: import('@prisma/client').File[]; _count: { files: number; guestUploadLinks: number; userChannels: number } } }>> {
     try {
       const channel = await this.prisma.channel.findFirst({
         where: {
@@ -160,7 +204,8 @@ export class ChannelService {
           _count: {
             select: {
               files: true,
-              guestUploadLinks: true
+              guestUploadLinks: true,
+              userChannels: true
             }
           }
         }
@@ -421,6 +466,12 @@ export class ChannelService {
         }
       });
 
+      // Invalidate caches
+      await Promise.all([
+        CacheService.invalidateUserCaches(userId),
+        CacheService.invalidateChannelCaches(channelId)
+      ]);
+
       // Get the created assignment with related data
       const userChannelWithDetails = await this.prisma.userChannel.findUnique({
         where: { 
@@ -488,6 +539,12 @@ export class ChannelService {
           userId_channelId: { userId, channelId }
         }
       });
+
+      // Invalidate caches
+      await Promise.all([
+        CacheService.invalidateUserCaches(userId),
+        CacheService.invalidateChannelCaches(channelId)
+      ]);
 
       return {
         success: true,

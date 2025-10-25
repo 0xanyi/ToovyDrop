@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { adminService } from '../../services/adminService';
 import { ApiResponse } from '../../types';
+import { useAuth } from '../../contexts/AuthContext';
 import Button from '../Button';
 import {
   Users,
@@ -35,6 +36,7 @@ const ChannelUserAssignment: React.FC<ChannelUserAssignmentProps> = ({
   onClose,
   onSave
 }) => {
+  const { refreshUser } = useAuth();
   const [assignedUsers, setAssignedUsers] = useState<User[]>([]);
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [selectedAvailable, setSelectedAvailable] = useState<string[]>([]);
@@ -116,7 +118,11 @@ const ChannelUserAssignment: React.FC<ChannelUserAssignmentProps> = ({
       const response = await adminService.updateChannelUsers(channelId, userIds);
 
       if (response.success) {
+        // Refresh user data to update channel assignments
+        await refreshUser();
+        // Call onSave to trigger parent refresh
         onSave();
+        // Close modal
         onClose();
       } else {
         throw new Error(response.error?.message || 'Failed to update user assignments');

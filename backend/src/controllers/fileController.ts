@@ -1,7 +1,6 @@
 import { Response } from 'express';
 import multer from 'multer';
 import fs from 'fs';
-import { prisma } from '../app';
 import { FileService } from '../services/fileService';
 import { UploadService } from '../services/uploadService';
 import { websocketService } from '../services/websocketService';
@@ -11,9 +10,24 @@ import logger from '../utils/logger';
 import Joi from 'joi';
 import { AuthenticatedRequest } from '../middleware/auth';
 
-// Initialize services
-const fileService = new FileService(prisma);
-const uploadService = new UploadService();
+// Lazy-load services to avoid circular dependency issues
+let fileService: FileService;
+let uploadService: UploadService;
+
+const getFileService = async () => {
+  if (!fileService) {
+    const { prisma } = await import('../app');
+    fileService = new FileService(prisma);
+  }
+  return fileService;
+};
+
+const getUploadService = () => {
+  if (!uploadService) {
+    uploadService = new UploadService();
+  }
+  return uploadService;
+};
 
 // Configure multer for chunked uploads
 const upload = multer({
@@ -33,10 +47,22 @@ const initializeUploadSchema = Joi.object({
 
 const chunkUploadSchema = Joi.object({
   uploadId: Joi.string().uuid().required(),
-  chunkIndex: Joi.number().integer().min(0).required(),
-  totalChunks: Joi.number().integer().positive().required(),
-  chunkSize: Joi.number().integer().positive().required(),
-  totalSize: Joi.number().integer().positive().required(),
+  chunkIndex: Joi.alternatives().try(
+    Joi.number().integer().min(0),
+    Joi.string().pattern(/^\d+$/).custom((value) => parseInt(value, 10))
+  ).required(),
+  totalChunks: Joi.alternatives().try(
+    Joi.number().integer().positive(),
+    Joi.string().pattern(/^\d+$/).custom((value) => parseInt(value, 10))
+  ).required(),
+  chunkSize: Joi.alternatives().try(
+    Joi.number().integer().positive(),
+    Joi.string().pattern(/^\d+$/).custom((value) => parseInt(value, 10))
+  ).required(),
+  totalSize: Joi.alternatives().try(
+    Joi.number().integer().positive(),
+    Joi.string().pattern(/^\d+$/).custom((value) => parseInt(value, 10))
+  ).required(),
   filename: Joi.string().required().max(255),
   mimeType: Joi.string().required(),
   channelId: Joi.string().uuid().required(),
@@ -72,6 +98,9 @@ export const initializeUpload = async (req: AuthenticatedRequest, res: Response)
     const { filename, mimeType, size, channelId } = value;
     const userId = req.user!.id;
 
+    // Import prisma dynamically
+    const { prisma } = await import('../app');
+
     // Verify channel exists and user has access
     const channel = await prisma.channel.findUnique({
       where: { id: channelId },
@@ -100,7 +129,8 @@ export const initializeUpload = async (req: AuthenticatedRequest, res: Response)
       });
     }
 
-    const result = await uploadService.initializeUpload(
+    const uploadSvc = getUploadService();
+    const result = await uploadSvc.initializeUpload(
       filename,
       mimeType,
       size,
@@ -167,6 +197,9 @@ export const uploadChunk = async (req: AuthenticatedRequest, res: Response) => {
 
     const userId = req.user!.id;
 
+    // Import prisma dynamically
+    const { prisma } = await import('../app');
+
     // Verify channel access (simplified)
     const channel = await prisma.channel.findUnique({
       where: { id: channelId },
@@ -179,7 +212,12 @@ export const uploadChunk = async (req: AuthenticatedRequest, res: Response) => {
       });
     }
 
-    const result = await uploadService.uploadChunk(
+    const uploadSvc = getUploadService();
+    
+    // Log the upload ID being used for chunk upload
+    logger.info(`Processing chunk upload for upload ID: ${uploadId}, chunk ${chunkIndex}/${totalChunks}`);
+    
+    const result = await uploadSvc.uploadChunk(
       req.file.buffer,
       uploadId,
       chunkIndex,
@@ -194,7 +232,7 @@ export const uploadChunk = async (req: AuthenticatedRequest, res: Response) => {
 
     if (result.uploadComplete) {
       // Upload is complete, now transfer to FTP
-      const uploadData = await uploadService.completeUpload(uploadId);
+      const uploadData = await uploadSvc.completeUpload(uploadId);
 
       // Perform malware scanning before transferring to FTP
       const scanResult = await malwareScanner.scanFile(
@@ -211,7 +249,7 @@ export const uploadChunk = async (req: AuthenticatedRequest, res: Response) => {
         });
 
         // Clean up the upload session and temporary file
-        await uploadService.cancelUpload(uploadId);
+        await uploadSvc.cancelUpload(uploadId);
 
         await auditService.recordEvent({
           action: 'UPLOAD_BLOCKED_MALWARE',
@@ -249,7 +287,8 @@ export const uploadChunk = async (req: AuthenticatedRequest, res: Response) => {
       });
       
       try {
-        const fileId = await fileService.uploadToFtp({
+        const fileSvc = await getFileService();
+        const fileId = await fileSvc.uploadToFtp({
           filename: uploadData.filename,
           mimeType: uploadData.mimeType,
           size: uploadData.size,
@@ -331,7 +370,8 @@ export const getUploadProgress = async (req: AuthenticatedRequest, res: Response
   try {
     const { uploadId } = req.params;
 
-    const progress = await uploadService.getUploadProgress(uploadId);
+    const uploadSvc = getUploadService();
+    const progress = await uploadSvc.getUploadProgress(uploadId);
     
     if (!progress) {
       return res.status(404).json({
@@ -360,7 +400,8 @@ export const cancelUpload = async (req: AuthenticatedRequest, res: Response) => 
   try {
     const { uploadId } = req.params;
 
-    await uploadService.cancelUpload(uploadId);
+    const uploadSvc = getUploadService();
+    await uploadSvc.cancelUpload(uploadId);
 
     logger.info(`Upload cancelled: ${uploadId} by user ${req.user!.id}`);
 
@@ -394,7 +435,8 @@ export const listFiles = async (req: AuthenticatedRequest, res: Response) => {
     const { page, limit, channelId } = value;
     const userId = req.user!.id;
 
-    const result = await fileService.listChannelFiles(channelId, page, limit, userId);
+    const fileSvc = await getFileService();
+    const result = await fileSvc.listChannelFiles(channelId, page, limit, userId);
 
     res.json({
       success: true,
@@ -426,7 +468,8 @@ export const searchFiles = async (req: AuthenticatedRequest, res: Response) => {
     const { query, page, limit, channelId } = value;
     const userId = req.user!.id;
 
-    const result = await fileService.searchChannelFiles(channelId, query, page, limit, userId);
+    const fileSvc = await getFileService();
+    const result = await fileSvc.searchChannelFiles(channelId, query, page, limit, userId);
 
     res.json({
       success: true,
@@ -449,7 +492,8 @@ export const downloadFile = async (req: AuthenticatedRequest, res: Response) => 
     const { fileId } = req.params;
     const userId = req.user!.id;
 
-    const fileInfo = await fileService.downloadFromFtp(fileId, userId);
+    const fileSvc = await getFileService();
+    const fileInfo = await fileSvc.downloadFromFtp(fileId, userId);
 
     res.download(fileInfo.filePath, fileInfo.filename, (err) => {
       if (err) {
@@ -486,7 +530,8 @@ export const deleteFile = async (req: AuthenticatedRequest, res: Response) => {
     const { fileId } = req.params;
     const userId = req.user!.id;
 
-    await fileService.deleteFile(fileId, userId);
+    const fileSvc = await getFileService();
+    await fileSvc.deleteFile(fileId, userId);
 
     logger.info(`File deleted: ${fileId} by user ${userId}`);
 

@@ -124,10 +124,8 @@ const ChannelForm: React.FC<ChannelFormProps> = ({
         });
       } else {
         // Create new channel
-        const slug = formData.name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
         response = await adminService.createChannel({
           name: formData.name.trim(),
-          slug,
           description: formData.description.trim() || undefined,
           ftpPath: ftpPath.trim()
         });
@@ -165,12 +163,18 @@ const ChannelForm: React.FC<ChannelFormProps> = ({
 
   // Auto-generate FTP path when name changes (for new channels)
   const handleNameChange = (value: string) => {
-    handleInputChange('name', value);
-
     // Auto-generate FTP path for new channels if not manually set
-    if (!channel && !formData.ftpPath && value.trim()) {
-      const generatedPath = `/uploads/${value.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
-      setFormData(prev => ({ ...prev, ftpPath: generatedPath }));
+    if (!channel && value.trim()) {
+      const slug = value.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
+      const generatedPath = `/uploads/${slug}`;
+      setFormData(prev => ({ ...prev, name: value, ftpPath: generatedPath }));
+    } else {
+      handleInputChange('name', value);
+    }
+
+    // Clear specific error when user starts typing
+    if (errors.name) {
+      setErrors(prev => ({ ...prev, name: undefined }));
     }
   };
 
@@ -290,13 +294,13 @@ const ChannelForm: React.FC<ChannelFormProps> = ({
                     <div className="flex items-center">
                       <span className="text-gray-600 mr-2">Slug:</span>
                       <code className="bg-gray-200 px-2 py-1 rounded text-xs">
-                        {formData.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}
+                        {formData.name.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '')}
                       </code>
                     </div>
                     <div className="flex items-center">
                       <span className="text-gray-600 mr-2">FTP Path:</span>
                       <code className="bg-gray-200 px-2 py-1 rounded text-xs">
-                        {formData.ftpPath || '/uploads/' + formData.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}
+                        {formData.ftpPath || '/uploads/' + formData.name.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '')}
                       </code>
                     </div>
                   </div>

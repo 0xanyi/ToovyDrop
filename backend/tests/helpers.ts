@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 import { PrismaClient } from '../src/app';
 
 export const prisma = new PrismaClient({
@@ -16,7 +17,7 @@ export const generateTestToken = (user: { id: string; email: string; role: strin
       email: user.email,
       role: user.role,
     },
-    process.env.JWT_SECRET || 'test-secret',
+    process.env.JWT_ACCESS_SECRET || 'very_secure_access_secret_at_least_32_characters',
     { expiresIn: '1h' }
   );
 };
@@ -53,11 +54,12 @@ export const createTestChannel = async (name: string) => {
   });
 };
 
-export const createTestUser = async (email: string, role: 'ADMIN' | 'CHANNEL_USER' = 'CHANNEL_USER') => {
+export const createTestUser = async (email: string, role: 'ADMIN' | 'CHANNEL_USER' = 'CHANNEL_USER', password: string = 'testpassword') => {
+  const passwordHash = await bcrypt.hash(password, 10);
   return await prisma.user.create({
     data: {
       email,
-      passwordHash: 'hashedpassword',
+      passwordHash,
       role,
     },
   });
