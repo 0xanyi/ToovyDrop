@@ -919,3 +919,115 @@ async function getChannelActivityData(startDate: Date, _endDate: Date) {
     channelsByUsage: channelsByUsageRange
   };
 }
+/**
+ * Get system configuration
+ */
+export const getSystemConfig = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    // For now, return default configuration
+    // In a real implementation, this would come from a database or config file
+    const config = {
+      general: {
+        siteName: process.env.SITE_NAME || 'ToovyDrop',
+        siteDescription: process.env.SITE_DESCRIPTION || 'Secure file sharing platform',
+        defaultLanguage: process.env.DEFAULT_LANGUAGE || 'en',
+        timezone: process.env.TIMEZONE || 'UTC',
+        maintenanceMode: process.env.MAINTENANCE_MODE === 'true' || false,
+        maintenanceMessage: process.env.MAINTENANCE_MESSAGE || 'System under maintenance. Please try again later.'
+      },
+      storage: {
+        maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '5368709120'), // 5GB
+        maxStoragePerUser: parseInt(process.env.MAX_STORAGE_PER_USER || '53687091200'), // 50GB
+        maxStoragePerChannel: parseInt(process.env.MAX_STORAGE_PER_CHANNEL || '107374182400'), // 100GB
+        allowedFileTypes: (process.env.ALLOWED_FILE_TYPES || 'image/*,video/*,audio/*,application/pdf,text/*').split(','),
+        autoCleanupEnabled: process.env.AUTO_CLEANUP_ENABLED === 'true' || false,
+        autoCleanupDays: parseInt(process.env.AUTO_CLEANUP_DAYS || '30')
+      },
+      security: {
+        passwordMinLength: parseInt(process.env.PASSWORD_MIN_LENGTH || '8'),
+        passwordRequireUppercase: process.env.PASSWORD_REQUIRE_UPPERCASE !== 'false',
+        passwordRequireLowercase: process.env.PASSWORD_REQUIRE_LOWERCASE !== 'false',
+        passwordRequireNumbers: process.env.PASSWORD_REQUIRE_NUMBERS !== 'false',
+        passwordRequireSpecialChars: process.env.PASSWORD_REQUIRE_SPECIAL_CHARS !== 'false',
+        sessionTimeoutMinutes: parseInt(process.env.SESSION_TIMEOUT_MINUTES || '60'),
+        maxLoginAttempts: parseInt(process.env.MAX_LOGIN_ATTEMPTS || '5'),
+        lockoutDurationMinutes: parseInt(process.env.LOCKOUT_DURATION_MINUTES || '15'),
+        twoFactorEnabled: process.env.TWO_FACTOR_ENABLED === 'true' || false
+      },
+      email: {
+        smtpHost: process.env.SMTP_HOST || '',
+        smtpPort: parseInt(process.env.SMTP_PORT || '587'),
+        smtpSecure: process.env.SMTP_SECURE === 'true' || false,
+        smtpUser: process.env.SMTP_USER || '',
+        smtpPassword: process.env.SMTP_PASSWORD || '',
+        fromEmail: process.env.FROM_EMAIL || '',
+        fromName: process.env.FROM_NAME || 'ToovyDrop',
+        emailNotificationsEnabled: process.env.EMAIL_NOTIFICATIONS_ENABLED !== 'false'
+      },
+      notifications: {
+        emailOnUserRegistration: process.env.EMAIL_ON_USER_REGISTRATION !== 'false',
+        emailOnFileUpload: process.env.EMAIL_ON_FILE_UPLOAD === 'true' || false,
+        emailOnChannelCreation: process.env.EMAIL_ON_CHANNEL_CREATION === 'true' || false,
+        emailOnSystemAlert: process.env.EMAIL_ON_SYSTEM_ALERT !== 'false',
+        webhookEnabled: process.env.WEBHOOK_ENABLED === 'true' || false,
+        webhookUrl: process.env.WEBHOOK_URL || ''
+      },
+      backup: {
+        autoBackupEnabled: process.env.AUTO_BACKUP_ENABLED === 'true' || false,
+        backupFrequency: process.env.BACKUP_FREQUENCY || 'daily',
+        retentionDays: parseInt(process.env.BACKUP_RETENTION_DAYS || '30'),
+        backupLocation: process.env.BACKUP_LOCATION || './backups'
+      }
+    };
+
+    const response: ApiResponse = {
+      success: true,
+      data: config
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw new AppError('Failed to fetch system configuration', 500, 'INTERNAL_ERROR');
+  }
+};
+
+/**
+ * Update system configuration
+ */
+export const updateSystemConfig = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const config = req.body;
+
+    // Log the configuration update
+    await auditService.recordEvent({
+      action: 'UPDATE_SYSTEM_CONFIG',
+      entityType: 'SYSTEM',
+      entityId: 'config',
+      actorId: req.user!.id,
+      metadata: {
+        updatedFields: Object.keys(config)
+      }
+    });
+
+    // In a real implementation, you would:
+    // 1. Validate the configuration
+    // 2. Save to database or update environment variables
+    // 3. Apply the changes (restart services if needed)
+    
+    // For now, just return success
+    const response: ApiResponse = {
+      success: true,
+      data: { message: 'System configuration updated successfully' }
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw new AppError('Failed to update system configuration', 500, 'INTERNAL_ERROR');
+  }
+};

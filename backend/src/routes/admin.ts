@@ -8,7 +8,9 @@ import {
   getAdminFiles,
   getAdminFileById,
   bulkFileOperation,
-  getStorageStats
+  getStorageStats,
+  getSystemConfig,
+  updateSystemConfig
 } from '../controllers/adminController';
 import {
   getUsers,
@@ -38,6 +40,18 @@ router.get('/dashboard/stats', getDashboardStats);
  * Get system health information
  */
 router.get('/system/health', getSystemHealth);
+
+/**
+ * GET /api/admin/config
+ * Get system configuration
+ */
+router.get('/config', getSystemConfig);
+
+/**
+ * PUT /api/admin/config
+ * Update system configuration
+ */
+router.put('/config', updateSystemConfig);
 
 /**
  * GET /api/admin/audit-logs
