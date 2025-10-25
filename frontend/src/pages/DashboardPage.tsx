@@ -15,7 +15,7 @@ const FilePreviewModal = React.lazy(() => import('../components/FilePreview'));
 const RenameFileModal = React.lazy(() => import('../components/RenameFileModal'));
 
 const DashboardPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const isMobile = useIsMobile();
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -30,16 +30,28 @@ const DashboardPage: React.FC = () => {
   // Handle tab changes from URL parameters
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab === 'upload' || tab === 'files') {
+    
+    // For admin users, redirect away from files tab to upload tab
+    if (isAdmin() && tab === 'files') {
+      setActiveTab('upload');
+      setSearchParams({ tab: 'upload' });
+      return;
+    }
+    
+    if (tab === 'upload' || (!isAdmin() && tab === 'files')) {
       setActiveTab(tab);
     } else {
       // Default to upload tab if no tab is specified
       setActiveTab('upload');
       setSearchParams({ tab: 'upload' });
     }
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, isAdmin]);
 
   const handleTabChange = (tab: 'upload' | 'files') => {
+    // Prevent admin users from accessing files tab
+    if (isAdmin() && tab === 'files') {
+      return;
+    }
     setActiveTab(tab);
     setSearchParams({ tab });
   };
@@ -69,8 +81,11 @@ const DashboardPage: React.FC = () => {
   };
 
   const handleUploadComplete = (_fileId: string, _fileData: unknown) => {
-    // Refresh the file list when upload completes
-    handleTabChange('files');
+    // For regular users, refresh the file list when upload completes
+    // Admin users stay on upload tab since they don't have access to My Files
+    if (!isAdmin()) {
+      handleTabChange('files');
+    }
   };
 
   const handleNextFile = () => {
@@ -115,14 +130,19 @@ const DashboardPage: React.FC = () => {
                   'text-gray-600',
                   isMobile ? 'text-sm' : 'text-base'
                 )}>
-                  {isMobile 
-                    ? 'Tap to select files or drag from other apps'
-                    : 'Drag and drop files or click to select. Files are securely uploaded and stored.'
-                  }
+                  {isAdmin() ? (
+                    isMobile 
+                      ? 'As admin, select any channel and upload files'
+                      : 'As an administrator, you can upload files to any channel. Select the target channel below.'
+                  ) : (
+                    isMobile 
+                      ? 'Tap to select files or drag from other apps'
+                      : 'Drag and drop files or click to select. Files are securely uploaded and stored.'
+                  )}
                 </p>
               </div>
 
-              {userChannels.length > 0 ? (
+              {(userChannels.length > 0 || isAdmin()) ? (
                 <Suspense fallback={
                   <div className="flex items-center justify-center h-64">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
@@ -156,7 +176,29 @@ const DashboardPage: React.FC = () => {
             </div>
           )}
 
-          {activeTab === 'files' && (
+          {activeTab === 'files' && isAdmin() && (
+            <div className={cn(isMobile ? 'space-y-4' : 'space-y-6')}>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <Settings className="h-5 w-5 text-blue-400" />
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-blue-800">
+                      Admin File Management
+                    </h3>
+                    <div className="mt-2 text-sm text-blue-700">
+                      <p>
+                        As an administrator, please use the "File Management" section in the admin panel to view and manage all files across channels.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'files' && !isAdmin() && (
             <div className={cn(isMobile ? 'space-y-4' : 'space-y-6')}>
               <div className={cn(isMobile && 'text-center')}>
                 <h2 className={cn(

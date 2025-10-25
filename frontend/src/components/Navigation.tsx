@@ -36,6 +36,7 @@ const navigationItems: NavigationItem[] = [
     label: 'My Files',
     icon: FolderOpen,
     path: '/dashboard?tab=files',
+    adminOnly: false, // This will be filtered out for admins
   },
   {
     id: 'admin-overview',
@@ -155,13 +156,25 @@ const Navigation: React.FC<NavigationProps> = ({ className }) => {
   };
 
   const handleNavigation = (item: NavigationItem) => {
+    // Prevent admin users from accessing the files tab
+    if (isAdmin() && item.id === 'files') {
+      navigate('/dashboard?tab=upload');
+      setIsMobileMenuOpen(false);
+      return;
+    }
+    
     navigate(item.path);
     setIsMobileMenuOpen(false);
   };
 
-  const filteredItems = navigationItems.filter(item => 
-    !item.adminOnly || (item.adminOnly && isAdmin())
-  );
+  const filteredItems = navigationItems.filter(item => {
+    // For admin users, hide "My Files" tab and show admin-only items
+    if (isAdmin()) {
+      return item.id !== 'files' && (item.adminOnly === true || item.adminOnly === undefined);
+    }
+    // For regular users, show non-admin items only
+    return !item.adminOnly;
+  });
 
   // Keyboard navigation for navigation items
   const { containerRef: navContainerRef, focusedIndex } = useKeyboardNavigation(

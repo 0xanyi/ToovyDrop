@@ -24,7 +24,7 @@ export class UploadService {
   private completeCallbacks: Map<string, (fileId: string, file: unknown) => void> = new Map();
   private errorCallbacks: Map<string, (error: string, retryable: boolean) => void> = new Map();
   private fileDataMap: Map<string, { file: File; channelId: string }> = new Map();
-  private CHUNK_SIZE = 1024 * 1024; // 1MB chunks
+  private CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks (must match backend)
   private MAX_RETRIES = 3;
   private RETRY_DELAY = 2000; // 2 seconds
 

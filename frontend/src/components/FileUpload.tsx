@@ -1,10 +1,12 @@
-import React, { useCallback, useState, useMemo } from 'react';
+import React, { useCallback, useState, useMemo, useEffect } from 'react';
 import { useDropzone, FileRejection } from 'react-dropzone';
 import { Upload, X, Pause, Play, RotateCcw, FileText, Image, Film, Music, Archive, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 import { uploadService } from '../services/uploadService';
+import { adminService } from '../services/adminService';
 import { UploadProgress, Channel } from '../types';
 import { useIsMobile, useIsTouchDevice } from '../hooks/useSwipeGestures';
 import { useScreenReader, generateId } from '../hooks/useAccessibility';
+import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../design-system/utils';
 import toast from 'react-hot-toast';
 
@@ -300,11 +302,40 @@ const FileUpload: React.FC<FileUploadProps> = ({
 }) => {
   const [uploads, setUploads] = useState<UploadProgress[]>([]);
   const [selectedChannelId, setSelectedChannelId] = useState(channelId);
+  const [allChannels, setAllChannels] = useState<Channel[]>(channels);
+  const [loadingChannels, setLoadingChannels] = useState(false);
+  const { isAdmin } = useAuth();
   const isMobile = useIsMobile();
   const isTouchDevice = useIsTouchDevice();
   const { announce, AnnouncementRegion } = useScreenReader();
   const dropzoneId = generateId('dropzone');
   const channelSelectId = generateId('channel-select');
+
+  // Fetch all channels for admin users
+  useEffect(() => {
+    const fetchAllChannels = async () => {
+      if (isAdmin()) {
+        setLoadingChannels(true);
+        try {
+          const response = await adminService.getChannels({ limit: 100 }); // Get all channels
+          if (response.success && response.data?.channels) {
+            setAllChannels(response.data.channels);
+            // If no channel is selected yet, select the first one
+            if (!selectedChannelId && response.data.channels.length > 0) {
+              setSelectedChannelId(response.data.channels[0].id);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to fetch channels:', error);
+          toast.error('Failed to load channels');
+        } finally {
+          setLoadingChannels(false);
+        }
+      }
+    };
+
+    fetchAllChannels();
+  }, [isAdmin, selectedChannelId]);
 
   // Update uploads periodically
   React.useEffect(() => {
@@ -483,38 +514,59 @@ const FileUpload: React.FC<FileUploadProps> = ({
     <div className={`space-y-4 ${className}`}>
       <AnnouncementRegion />
       {/* Channel selector */}
-      {channels.length > 1 && (
+      {(allChannels.length > 1 || isAdmin()) && (
         <div className="mobile-padding lg:p-0 form-field-accessible">
           <label 
             htmlFor={channelSelectId}
             className="block text-sm font-medium text-gray-700 mb-2"
           >
             Upload to Channel
-          </label>
-          <select
-            id={channelSelectId}
-            value={selectedChannelId}
-            onChange={(e) => {
-              setSelectedChannelId(e.target.value);
-              const selectedChannel = channels.find(c => c.id === e.target.value);
-              announce(`Selected channel: ${selectedChannel?.name}`);
-            }}
-            className={cn(
-              'w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
-              'text-base', // Prevent zoom on iOS
-              isMobile && 'touch-target-comfortable'
+            {isAdmin() && (
+              <span className="text-xs text-gray-500 ml-2">(Admin: Select any channel)</span>
             )}
-            aria-describedby={`${channelSelectId}-description`}
-          >
-            {channels.map(channel => (
-              <option key={channel.id} value={channel.id}>
-                {channel.name}
-              </option>
-            ))}
-          </select>
+          </label>
+          {loadingChannels ? (
+            <div className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 flex items-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+              <span className="text-gray-600">Loading channels...</span>
+            </div>
+          ) : (
+            <select
+              id={channelSelectId}
+              value={selectedChannelId}
+              onChange={(e) => {
+                setSelectedChannelId(e.target.value);
+                const selectedChannel = allChannels.find(c => c.id === e.target.value);
+                announce(`Selected channel: ${selectedChannel?.name}`);
+              }}
+              className={cn(
+                'w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                'text-base', // Prevent zoom on iOS
+                isMobile && 'touch-target-comfortable'
+              )}
+              aria-describedby={`${channelSelectId}-description`}
+              disabled={allChannels.length === 0}
+            >
+              {allChannels.length === 0 ? (
+                <option value="">No channels available</option>
+              ) : (
+                allChannels.map(channel => (
+                  <option key={channel.id} value={channel.id}>
+                    {channel.name}
+                    {channel.description && ` - ${channel.description}`}
+                  </option>
+                ))
+              )}
+            </select>
+          )}
           <div id={`${channelSelectId}-description`} className="sr-only">
             Select the channel where you want to upload your files
           </div>
+          {isAdmin() && allChannels.length > 0 && (
+            <p className="text-xs text-gray-500 mt-1">
+              As an admin, you can upload to any channel. Selected: {allChannels.find(c => c.id === selectedChannelId)?.name}
+            </p>
+          )}
         </div>
       )}
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { cn, flex } from '../design-system/utils';
 import { ChevronRight } from 'lucide-react';
 
@@ -16,6 +17,7 @@ interface BreadcrumbProps {
 
 const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className }) => {
   const location = useLocation();
+  const { isAdmin } = useAuth();
 
   // Generate breadcrumb items from current location if not provided
   const getBreadcrumbItems = (): BreadcrumbItem[] => {
@@ -31,7 +33,7 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className }) => {
     if (pathSegments[0] === 'dashboard') {
       if (tab === 'upload') {
         breadcrumbItems.push({ label: 'Upload Files', isActive: true });
-      } else if (tab === 'files') {
+      } else if (tab === 'files' && !isAdmin()) {
         breadcrumbItems.push({ label: 'My Files', isActive: true });
       } else {
         // Default dashboard view - redirect to upload
