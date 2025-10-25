@@ -236,7 +236,7 @@ export class UploadService {
   }
 
   private async initiateUploadSession(
-    uploadId: string,
+    _uploadId: string,
     file: File,
     channelId: string,
     _totalChunks: number

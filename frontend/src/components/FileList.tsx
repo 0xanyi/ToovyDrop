@@ -28,6 +28,7 @@ interface FileListProps {
   channelId?: string;
   onFileSelect?: (file: FileType) => void;
   onFilesChange?: (files: FileType[]) => void;
+  onRename?: (file: FileType) => void;
   className?: string;
 }
 
