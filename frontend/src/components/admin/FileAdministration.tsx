@@ -160,8 +160,8 @@ const FileAdministration: React.FC = () => {
       if (filters.isActive !== undefined) params.append('isActive', filters.isActive.toString());
       if (filters.uploadedByGuest !== undefined) params.append('uploadedByGuest', filters.uploadedByGuest.toString());
 
-      if (filters.dateRange?.start) params.append('startDate', filters.dateRange.start);
-      if (filters.dateRange?.end) params.append('endDate', filters.dateRange.end);
+      if (filters.dateRange?.start) params.append('dateFrom', filters.dateRange.start);
+      if (filters.dateRange?.end) params.append('dateTo', filters.dateRange.end);
 
       if (filters.sizeRange?.min) params.append('minSize', filters.sizeRange.min.toString());
       if (filters.sizeRange?.max) params.append('maxSize', filters.sizeRange.max.toString());
@@ -189,10 +189,7 @@ const FileAdministration: React.FC = () => {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
-      // Fallback to empty state for now
-      setFiles([]);
-      setPagination({ page: 1, limit: 20, total: 0, totalPages: 0 });
-      setSummary({ totalSize: 0, totalFiles: 0, avgFileSize: 0, largestFile: { name: '', size: 0 } });
+      // Don't clear existing data on error - just show error message
     } finally {
       setLoading(false);
     }

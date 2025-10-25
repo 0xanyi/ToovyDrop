@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { ApiResponse } from '../types';
+import { adminService } from '../services/adminService';
 import Button from '../components/Button';
 import UserList from '../components/admin/UserList';
 import UserForm from '../components/admin/UserForm';
@@ -228,9 +229,21 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleChannelUserAssignmentSave = () => {
+  const handleChannelUserAssignmentSave = async () => {
     setIsChannelUserAssignmentOpen(false);
     setChannelRefreshTrigger(prev => prev + 1);
+    
+    // Refresh the selected channel details to show updated user count
+    if (selectedChannel) {
+      try {
+        const response = await adminService.getChannel(selectedChannel.id);
+        if (response.success && response.data) {
+          setSelectedChannel(response.data);
+        }
+      } catch (error) {
+        console.error('Error refreshing channel details:', error);
+      }
+    }
   };
 
   const handleChannelUserAssignmentClose = () => {

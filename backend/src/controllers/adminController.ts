@@ -263,21 +263,30 @@ export const getAdminFiles = async (req: AuthenticatedRequest, res: Response): P
     ]);
 
     // Get the largest file details
-    const largestFile = await prisma.file.findFirst({
-      where: {
-        ...where,
-        size: aggregateStats._max.size || 0
-      },
-      select: {
-        originalName: true,
-        size: true
-      }
-    });
+    let largestFile = null;
+    if (aggregateStats._max.size && aggregateStats._max.size > 0) {
+      largestFile = await prisma.file.findFirst({
+        where: {
+          isActive: where.isActive as boolean,
+          size: aggregateStats._max.size
+        },
+        select: {
+          originalName: true,
+          size: true
+        }
+      });
+    }
+
+    // Convert BigInt values to numbers for JSON serialization
+    const serializedFiles = files.map(file => ({
+      ...file,
+      size: Number(file.size)
+    }));
 
     const response: ApiResponse = {
       success: true,
       data: {
-        files,
+        files: serializedFiles,
         pagination: {
           page: pageNum,
           limit: limitNum,
@@ -290,7 +299,7 @@ export const getAdminFiles = async (req: AuthenticatedRequest, res: Response): P
           avgFileSize: Number(aggregateStats._avg.size || 0),
           largestFile: {
             name: largestFile?.originalName || '',
-            size: largestFile?.size || 0
+            size: Number(largestFile?.size || 0)
           }
         }
       }
@@ -298,6 +307,7 @@ export const getAdminFiles = async (req: AuthenticatedRequest, res: Response): P
 
     res.status(200).json(response);
   } catch (error) {
+    console.error('Error in getAdminFiles:', error);
     if (error instanceof AppError) {
       throw error;
     }

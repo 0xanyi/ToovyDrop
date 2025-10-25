@@ -30,6 +30,7 @@ export default [
         WebSocket: 'readonly',
         File: 'readonly',
         Blob: 'readonly',
+        FormData: 'readonly',
         URL: 'readonly',
         URLSearchParams: 'readonly',
         Headers: 'readonly',

@@ -9,6 +9,7 @@ import {
   searchFiles,
   downloadFile,
   deleteFile,
+  renameFile,
   uploadMiddleware,
 } from '../controllers/fileController';
 
@@ -27,6 +28,7 @@ router.delete('/upload/:uploadId/cancel', cancelUpload);
 router.get('/', listFiles);
 router.get('/search', searchFiles);
 router.get('/:fileId/download', downloadFile);
+router.patch('/:fileId/rename', renameFile);
 router.delete('/:fileId', deleteFile);
 
 export default router;

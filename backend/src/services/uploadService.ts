@@ -238,6 +238,7 @@ export class UploadService {
       // Get upload session
       const session = await this.getUploadSession(uploadId);
       if (!session) {
+        logger.error(`Upload session not found for ID: ${uploadId}`);
         throw new Error('Upload session not found or expired');
       }
 
@@ -455,11 +456,15 @@ export class UploadService {
       uploadedChunks: Array.from(session.uploadedChunks),
     };
     
+    logger.info(`Storing upload session in Redis: ${session.uploadId}, TTL: ${this.uploadSessionTTL}s`);
+    
     await redis.setEx(
       `upload:${session.uploadId}`,
       this.uploadSessionTTL,
       JSON.stringify(sessionData)
     );
+    
+    logger.info(`Successfully stored upload session: ${session.uploadId}`);
   }
 
   /**
@@ -467,11 +472,15 @@ export class UploadService {
    */
   private async getUploadSession(uploadId: string): Promise<UploadSession | null> {
     try {
+      logger.info(`Attempting to retrieve upload session: ${uploadId}`);
       const sessionData = await redis.get(`upload:${uploadId}`);
+      
       if (!sessionData) {
+        logger.info(`Upload session not found in Redis: ${uploadId}`);
         return null;
       }
 
+      logger.info(`Found upload session in Redis: ${uploadId}`);
       const session = JSON.parse(sessionData) as UploadSession;
       session.uploadedChunks = new Set(session.uploadedChunks);
       session.createdAt = new Date(session.createdAt);

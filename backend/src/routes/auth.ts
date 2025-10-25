@@ -110,19 +110,29 @@ router.post('/login', async (req: Request, res: Response, next): Promise<void> =
     });
     
     // Get user's channels
-    const userChannels = await prisma.userChannel.findMany({
-      where: { userId: user.id },
-    });
-    
-    // Get channel details
-    const channels = await prisma.channel.findMany({
-      where: {
-        id: {
-          in: userChannels.map(uc => uc.channelId),
+    let channels;
+    if (user.role === 'ADMIN') {
+      // Admins have access to all active channels
+      channels = await prisma.channel.findMany({
+        where: { isActive: true },
+        select: { id: true, slug: true, name: true, description: true, ftpPath: true, createdAt: true, updatedAt: true, isActive: true },
+      });
+    } else {
+      // Regular users only see their assigned channels
+      const userChannels = await prisma.userChannel.findMany({
+        where: { userId: user.id },
+      });
+      
+      channels = await prisma.channel.findMany({
+        where: {
+          id: {
+            in: userChannels.map(uc => uc.channelId),
+          },
+          isActive: true,
         },
-      },
-      select: { id: true, slug: true, name: true },
-    });
+        select: { id: true, slug: true, name: true, description: true, ftpPath: true, createdAt: true, updatedAt: true, isActive: true },
+      });
+    }
     
     // Generate tokens
     const tokens = generateTokens(user);
@@ -219,7 +229,7 @@ router.get('/me', authenticate, async (req: AuthenticatedRequest, res: Response,
     if (req.user.role === 'ADMIN') {
       channels = await prisma.channel.findMany({
         where: { isActive: true },
-        select: { id: true, slug: true, name: true },
+        select: { id: true, slug: true, name: true, description: true, ftpPath: true, createdAt: true, updatedAt: true, isActive: true },
         orderBy: { name: 'asc' },
       });
     } else {
@@ -236,7 +246,7 @@ router.get('/me', authenticate, async (req: AuthenticatedRequest, res: Response,
           },
           isActive: true,
         },
-        select: { id: true, slug: true, name: true },
+        select: { id: true, slug: true, name: true, description: true, ftpPath: true, createdAt: true, updatedAt: true, isActive: true },
         orderBy: { name: 'asc' },
       });
     }

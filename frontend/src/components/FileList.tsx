@@ -16,11 +16,13 @@ import {
   Music,
   Archive,
   CheckSquare,
-  Square
+  Square,
+  Edit2
 } from 'lucide-react';
 import { fileService } from '../services/fileService';
 import { File as FileType, FileFilters } from '../types';
 import toast from 'react-hot-toast';
+import RenameFileModal from './RenameFileModal';
 
 interface FileListProps {
   channelId?: string;
@@ -37,6 +39,7 @@ interface FileItemProps {
   onPreview: (file: FileType) => void;
   onDownload: (file: FileType) => void;
   onDelete: (file: FileType) => void;
+  onRename: (file: FileType) => void;
   showActions?: boolean;
 }
 
@@ -48,6 +51,7 @@ const FileItem: React.FC<FileItemProps> = ({
   onPreview,
   onDownload,
   onDelete,
+  onRename,
   showActions = true
 }) => {
   const [showMenu, setShowMenu] = useState(false);
@@ -140,6 +144,17 @@ const FileItem: React.FC<FileItemProps> = ({
                     Download
                   </button>
                   <button
+                    className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRename(file);
+                      setShowMenu(false);
+                    }}
+                  >
+                    <Edit2 className="w-4 h-4 mr-2" />
+                    Rename
+                  </button>
+                  <button
                     className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -163,8 +178,13 @@ const FileItem: React.FC<FileItemProps> = ({
           </div>
 
           <div className="text-center w-full">
-            <p className="text-sm font-medium text-gray-900 truncate" title={file.originalName}>
-              {file.originalName}
+            <p 
+              className="text-sm font-medium text-gray-900 truncate max-w-[200px] mx-auto" 
+              title={file.originalName}
+            >
+              {file.originalName.length > 30 
+                ? `${file.originalName.substring(0, 27)}...` 
+                : file.originalName}
             </p>
             <p className="text-xs text-gray-500 mt-1">
               {fileService.formatFileSize(file.size)}
@@ -208,8 +228,13 @@ const FileItem: React.FC<FileItemProps> = ({
 
         {/* File info */}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-900 truncate" title={file.originalName}>
-            {file.originalName}
+          <p 
+            className="text-sm font-medium text-gray-900 truncate" 
+            title={file.originalName}
+          >
+            {file.originalName.length > 50 
+              ? `${file.originalName.substring(0, 47)}...` 
+              : file.originalName}
           </p>
           <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
             <span>{fileService.formatFileSize(file.size)}</span>
@@ -287,6 +312,8 @@ const FileList: React.FC<FileListProps> = ({
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'size' | 'date'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [renameModalOpen, setRenameModalOpen] = useState(false);
+  const [fileToRename, setFileToRename] = useState<FileType | null>(null);
 
   const limit = view === 'grid' ? 20 : 25;
 
@@ -394,6 +421,24 @@ const FileList: React.FC<FileListProps> = ({
       loadFiles(); // Reload the list
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete files';
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleRename = (file: FileType) => {
+    setFileToRename(file);
+    setRenameModalOpen(true);
+  };
+
+  const handleRenameSubmit = async (newName: string) => {
+    if (!fileToRename) return;
+
+    try {
+      await fileService.renameFile(fileToRename.id, newName);
+      toast.success('File renamed successfully');
+      loadFiles(); // Reload the list
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to rename file';
       toast.error(errorMessage);
     }
   };
@@ -681,9 +726,21 @@ const FileList: React.FC<FileListProps> = ({
                 onPreview={handlePreview}
                 onDownload={handleDownload}
                 onDelete={handleDelete}
+                onRename={handleRename}
               />
             ))}
           </div>
+
+          {/* Rename Modal */}
+          <RenameFileModal
+            isOpen={renameModalOpen}
+            currentName={fileToRename?.originalName || ''}
+            onClose={() => {
+              setRenameModalOpen(false);
+              setFileToRename(null);
+            }}
+            onRename={handleRenameSubmit}
+          />
 
           {/* Pagination */}
           {totalPages > 1 && (

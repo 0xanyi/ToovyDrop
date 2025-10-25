@@ -27,16 +27,9 @@ import { validateRequest, validateParams, validateQuery } from '../middleware/va
 
 const router = Router();
 
-// Public routes (authenticated)
-router.get('/user', authenticate, getUserChannels);
-router.get('/:id', authenticate, validateParams(idParamsSchema), getChannelById);
-
-// Admin only routes
-router.post('/', authenticate, authorize(['ADMIN']), validateRequest(createChannelSchema), createChannel);
+// Admin only routes (specific routes first)
 router.get('/admin', authenticate, authorize(['ADMIN']), getAdminChannels);
-router.get('/', authenticate, authorize(['ADMIN']), validateQuery(paginationQuerySchema), getAllChannels);
-router.put('/:id', authenticate, authorize(['ADMIN']), validateParams(idParamsSchema), validateRequest(updateChannelSchema), updateChannel);
-router.delete('/:id', authenticate, authorize(['ADMIN']), validateParams(idParamsSchema), deleteChannel);
+router.get('/user', authenticate, getUserChannels);
 
 // User-Channel assignment routes (Admin only)
 router.post(
@@ -55,8 +48,16 @@ router.post(
   removeUserFromChannel
 );
 
+// Channel-specific user management routes
 router.get('/:channelId/users', authenticate, authorize(['ADMIN']), validateParams(channelIdParamsSchema), getChannelUsers);
 router.put('/:channelId/users', authenticate, authorize(['ADMIN']), validateParams(channelIdParamsSchema), updateChannelUsers);
 router.get('/:channelId/available-users', authenticate, authorize(['ADMIN']), validateParams(channelIdParamsSchema), getAvailableUsers);
+
+// General channel routes
+router.post('/', authenticate, authorize(['ADMIN']), validateRequest(createChannelSchema), createChannel);
+router.get('/', authenticate, authorize(['ADMIN']), validateQuery(paginationQuerySchema), getAllChannels);
+router.get('/:id', authenticate, validateParams(idParamsSchema), getChannelById);
+router.put('/:id', authenticate, authorize(['ADMIN']), validateParams(idParamsSchema), validateRequest(updateChannelSchema), updateChannel);
+router.delete('/:id', authenticate, authorize(['ADMIN']), validateParams(idParamsSchema), deleteChannel);
 
 export default router;

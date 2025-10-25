@@ -360,6 +360,21 @@ class AdminService {
   }
 
   /**
+   * Get single channel details
+   */
+  async getChannel(channelId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/api/channels/${channelId}`, {
+      headers: this.getAuthHeaders()
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch channel: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
    * Delete channel
    */
   async deleteChannel(channelId: string): Promise<ApiResponse<any>> {
@@ -380,7 +395,6 @@ class AdminService {
    */
   async createChannel(data: {
     name: string;
-    slug: string;
     description?: string;
     ftpPath: string;
   }): Promise<ApiResponse<any>> {
@@ -402,7 +416,6 @@ class AdminService {
    */
   async updateChannel(channelId: string, data: {
     name?: string;
-    slug?: string;
     description?: string;
     ftpPath?: string;
     isActive?: boolean;

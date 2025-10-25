@@ -5,12 +5,14 @@ A modern web-based file transfer platform with user authentication, channel-base
 ## Features
 
 ### Core Functionality
+
 - User authentication with JWT tokens
 - Role-based access control (Admin, Channel User)
 - Channel-based file organization
 - Guest upload links with expiration and upload limits
 
 ### File Upload System ✅
+
 - **Chunked file uploads** supporting files up to 5GB
 - **Real-time progress tracking** via WebSocket connections
 - **Resumable uploads** - resume interrupted transfers
@@ -21,6 +23,7 @@ A modern web-based file transfer platform with user authentication, channel-base
 - **Automatic cleanup** of expired upload sessions
 
 ### File Management Interface ✅
+
 - **Modern drag-and-drop upload** interface with visual feedback
 - **File browsing** with grid and list view modes
 - **Advanced search and filtering** by name, type, size, date range
@@ -32,6 +35,7 @@ A modern web-based file transfer platform with user authentication, channel-base
 - **Secure file deletion** with confirmation dialogs
 
 ### Technical Stack
+
 - Modern, responsive UI built with React and Tailwind CSS
 - RESTful API built with Node.js, Express, and TypeScript
 - PostgreSQL database with Prisma ORM
@@ -96,12 +100,14 @@ toovydrop/
 ### Installation
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/yourusername/toovydrop.git
    cd toovydrop
    ```
 
 2. Copy the environment file:
+
    ```bash
    cp .env.example .env
    ```
@@ -111,34 +117,40 @@ toovydrop/
 ### Development Setup
 
 1. Start the development database services:
+
    ```bash
    docker-compose -f docker-compose.dev.yml up -d
    ```
 
 2. Install backend dependencies:
+
    ```bash
    cd backend
    npm install
    ```
 
 3. Generate Prisma client and push database schema:
+
    ```bash
    npx prisma generate
    npx prisma db push
    ```
 
 4. Start the backend development server:
+
    ```bash
    npm run dev
    ```
 
 5. In a new terminal, install frontend dependencies:
+
    ```bash
    cd frontend
    npm install
    ```
 
 6. Start the frontend development server:
+
    ```bash
    npm run dev
    ```
@@ -148,6 +160,7 @@ toovydrop/
 ### Production Deployment with Docker
 
 1. Build and start all services:
+
    ```bash
    docker-compose up -d --build
    ```
@@ -157,6 +170,7 @@ toovydrop/
 ## API Documentation
 
 ### Authentication Endpoints
+
 - `POST /api/auth/login` - User login
 - `POST /api/auth/create-admin` - Create admin (admin only)
 - `GET /api/auth/me` - Get current user
@@ -164,6 +178,7 @@ toovydrop/
 - `POST /api/auth/refresh` - Refresh token
 
 ### File Management Endpoints
+
 - `POST /api/files/upload/initialize` - Initialize chunked upload
 - `POST /api/files/upload/chunk` - Upload file chunk
 - `GET /api/files/upload/:uploadId/progress` - Get upload progress
@@ -174,6 +189,7 @@ toovydrop/
 - `DELETE /api/files/:fileId` - Delete file
 
 ### Channel Management
+
 - `GET /api/channels` - List user channels
 - `POST /api/channels` - Create channel (admin only)
 - `GET /api/channels/:id` - Get channel details
@@ -181,18 +197,21 @@ toovydrop/
 - `DELETE /api/channels/:id` - Delete channel (admin only)
 
 ### User Management
+
 - `GET /api/users` - List users (admin only)
 - `GET /api/users/:id` - Get user details
 - `PUT /api/users/:id` - Update user
 - `DELETE /api/users/:id` - Delete user (admin only)
 
 ### Performance Monitoring (Phase VI)
+
 - `GET /api/performance/metrics` - Get current performance metrics and historical data
 - `GET /api/performance/health` - Get system health status
 - `GET /api/performance/database` - Get database performance statistics
 - `GET /api/performance/cache` - Get cache performance statistics
 
 ### Admin Management
+
 - `GET /api/admin/dashboard/stats` - Get dashboard statistics
 - `GET /api/admin/system/health` - Get system health information
 - `GET /api/admin/analytics` - Get comprehensive analytics data
@@ -268,6 +287,7 @@ The application now includes comprehensive performance monitoring:
 ## Architecture Highlights
 
 ### 🚀 Performance Features
+
 - **Chunked uploads** with configurable chunk sizes for optimal performance
 - **WebSocket integration** for real-time progress updates without polling
 - **Redis caching** for session management and upload state with 85%+ hit rate
@@ -278,6 +298,7 @@ The application now includes comprehensive performance monitoring:
 - **Real-time performance monitoring** with comprehensive metrics collection
 
 ### 🎨 User Experience
+
 - **Modern, intuitive interface** built with Tailwind CSS
 - **Responsive design** that works seamlessly on all devices
 - **Accessibility features** with ARIA labels and keyboard navigation
@@ -286,6 +307,7 @@ The application now includes comprehensive performance monitoring:
 - **Dark mode support** (planned for Phase 5)
 
 ### 🔒 Security & Reliability
+
 - **JWT-based authentication** with refresh token rotation
 - **Role-based access control** with granular permissions
 - **File validation** with comprehensive MIME type checking
@@ -296,6 +318,7 @@ The application now includes comprehensive performance monitoring:
 ## Current Status
 
 ### ✅ Phase 1: Foundation & Core Infrastructure (Completed)
+
 - User authentication with JWT tokens
 - Role-based access control (ADMIN/CHANNEL_USER)
 - Database schema with Prisma ORM
@@ -304,6 +327,7 @@ The application now includes comprehensive performance monitoring:
 - Admin user management system
 
 ### ✅ Phase 2: File Upload & FTP Integration (Completed)
+
 - Chunked file upload system (up to 5GB files)
 - Real-time WebSocket progress tracking
 - Comprehensive file validation (40+ MIME types)
@@ -313,6 +337,7 @@ The application now includes comprehensive performance monitoring:
 - Automatic cleanup and maintenance
 
 ### ✅ Phase 3: Channel Management & Frontend Foundation (Completed)
+
 - Channel CRUD operations with RESTful API
 - User-channel assignment system
 - Guest upload link generation with expiration
@@ -321,6 +346,7 @@ The application now includes comprehensive performance monitoring:
 - File organization by channels
 
 ### ✅ Phase 4: File Management Interface (Completed)
+
 - Drag-and-drop file upload with queue management
 - Upload progress tracking with pause/resume functionality
 - Error handling and retry mechanisms
@@ -331,6 +357,7 @@ The application now includes comprehensive performance monitoring:
 - Keyboard navigation and accessibility features
 
 ### ✅ Phase 5: Admin Interface (Completed)
+
 - **Comprehensive admin dashboard** with real-time statistics and system health monitoring
 - **Advanced user management** with CRUD operations, role assignment, and channel management
 - **File administration interface** with filtering, bulk operations, and detailed file information
@@ -340,6 +367,7 @@ The application now includes comprehensive performance monitoring:
 - **Activity monitoring** and audit logging capabilities
 
 ### ✅ Phase 6: Performance & Security Optimization (Completed)
+
 - **Database Performance**: Comprehensive indexing strategy achieving 40-60% query improvement
 - **Frontend Optimization**: React.memo implementation and virtual scrolling for large file lists
 - **Caching Layer**: Redis caching for user channels, system stats, and file listings (30-40% load reduction)
@@ -350,12 +378,14 @@ The application now includes comprehensive performance monitoring:
 - **Enhanced UI**: Animated progress bars with speed indicators and time estimates
 
 ### ✅ Bug Fixes: Admin Access & State Persistence (October 10, 2025)
+
 - **Admin Channel Access**: Admins now automatically see all active channels without explicit assignment
 - **Cache Invalidation**: User channel assignments properly invalidate cache and reflect on refresh
 - **State Persistence**: Fixed issue where channel assignments weren't persisting after page navigation
 - **Upload Permissions**: Admins can now upload to any channel by default
 
 ### 🚧 Next Phase: Phase 7 - Production Deployment & Monitoring
+
 - **Production Deployment**: SSL/TLS configuration, container orchestration
 - **Advanced Monitoring**: Application performance monitoring (APM), log aggregation
 - **Backup & Recovery**: Automated backup strategies, disaster recovery planning
@@ -363,6 +393,7 @@ The application now includes comprehensive performance monitoring:
 - **Security Audit**: Comprehensive security assessment and penetration testing
 
 ### 📋 Supported File Types
+
 - **Images**: JPG, PNG, GIF, WebP, SVG
 - **Documents**: PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, TXT, CSV
 - **Archives**: ZIP, RAR, 7Z, TAR, GZ
@@ -371,6 +402,7 @@ The application now includes comprehensive performance monitoring:
 - **Code**: JS, JSON, HTML, CSS, XML, MD
 
 ### 🔒 Security Features
+
 - JWT-based authentication with refresh tokens
 - Role-based access control
 - Input validation with Joi schemas
@@ -385,11 +417,13 @@ The application now includes comprehensive performance monitoring:
 - HTTPS ready for production
 
 #### CSRF Token Workflow
+
 - Retrieve a single-use token via `GET /api/security/csrf-token` (requires authentication).
 - Include the token in the `x-csrf-token` header for every POST, PUT, PATCH, and DELETE request.
 - Tokens expire after 15 minutes and are invalidated after first use.
 
 #### Malware Scanning
+
 - Controlled through the `ENABLE_MALWARE_SCAN` environment variable (enabled by default).
 - Uploaded files are scanned before leaving the temporary store; suspicious uploads are rejected and logged for auditing.
 

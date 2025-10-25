@@ -8,7 +8,9 @@ const EXCLUDED_PATHS = new Set([
   '/api/security/csrf-token',
   '/api/health',
   '/api/auth/login',
-  '/api/auth/register'
+  '/api/auth/register',
+  '/api/files/upload/chunk', // Chunked uploads are already authenticated and rate-limited
+  '/api/files/upload/initialize'
 ]);
 
 /**
