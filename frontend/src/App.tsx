@@ -12,7 +12,14 @@ import './utils/errorLogger';
 // Lazy load pages for code splitting
 const LoginPage = React.lazy(() => import('./pages/LoginPage'));
 const DashboardPage = React.lazy(() => import('./pages/DashboardPage'));
-const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
+
+// Admin pages
+const AdminOverviewPage = React.lazy(() => import('./pages/admin/AdminOverviewPage'));
+const AdminUsersPage = React.lazy(() => import('./pages/admin/AdminUsersPage'));
+const AdminChannelsPage = React.lazy(() => import('./pages/admin/AdminChannelsPage'));
+const AdminFilesPage = React.lazy(() => import('./pages/admin/AdminFilesPage'));
+const AdminAnalyticsPage = React.lazy(() => import('./pages/admin/AdminAnalyticsPage'));
+const AdminSettingsPage = React.lazy(() => import('./pages/admin/AdminSettingsPage'));
 
 // Loading component for Suspense fallback
 const LoadingSpinner: React.FC = () => (
@@ -70,7 +77,47 @@ const AppRoutes: React.FC = () => {
             path="/admin"
             element={
               <AdminRoute>
-                <AdminDashboard />
+                <AdminOverviewPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <AdminRoute>
+                <AdminUsersPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/channels"
+            element={
+              <AdminRoute>
+                <AdminChannelsPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/files"
+            element={
+              <AdminRoute>
+                <AdminFilesPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/analytics"
+            element={
+              <AdminRoute>
+                <AdminAnalyticsPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/settings"
+            element={
+              <AdminRoute>
+                <AdminSettingsPage />
               </AdminRoute>
             }
           />

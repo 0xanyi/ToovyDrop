@@ -29,7 +29,7 @@ const Layout: React.FC<LayoutProps> = ({
       <Navigation />
       
       {/* Main Content Area */}
-      <div className="lg:pl-64">
+      <div className="lg:pl-64 min-h-screen">
         {/* Header */}
         <Header showBreadcrumb={showBreadcrumb} />
         

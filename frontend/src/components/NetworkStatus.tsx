@@ -83,7 +83,7 @@ const NetworkStatus: React.FC<NetworkStatusProps> = ({
       window.removeEventListener('offline', handleOffline);
       
       if ('connection' in navigator) {
-        const connection = (navigator as unknown).connection;
+        const connection = (navigator as any).connection;
         connection?.removeEventListener('change', updateConnectionInfo);
       }
     };

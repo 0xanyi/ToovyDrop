@@ -31,7 +31,7 @@ export const useErrorRecovery = (options: ErrorRecoveryOptions = {}) => {
     lastError: null
   });
 
-  const retryTimeoutRef = useRef<NodeJS.Timeout>();
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const executeWithRecovery = useCallback(async <T>(
     operation: () => Promise<T>,
@@ -142,10 +142,7 @@ export const useNetworkErrorRecovery = () => {
     );
   };
 
-  const getRetryDelay = (retryCount: number): number => {
-    // Exponential backoff: 1s, 2s, 4s, 8s...
-    return Math.min(1000 * Math.pow(2, retryCount), 10000);
-  };
+
 
   return useErrorRecovery({
     maxRetries: 3,

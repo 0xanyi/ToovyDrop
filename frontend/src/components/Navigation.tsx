@@ -7,10 +7,14 @@ import { useKeyboardNavigation, useAriaExpanded } from '../hooks/useAccessibilit
 import { 
   Upload, 
   FolderOpen, 
-  Shield, 
   Menu, 
   X,
-  Home
+  Home,
+  Users,
+  FileText,
+  Activity,
+  BarChart3,
+  Settings
 } from 'lucide-react';
 
 interface NavigationItem {
@@ -41,10 +45,45 @@ const navigationItems: NavigationItem[] = [
     path: '/dashboard?tab=files',
   },
   {
-    id: 'admin',
-    label: 'Admin Panel',
-    icon: Shield,
+    id: 'admin-overview',
+    label: 'Admin Overview',
+    icon: BarChart3,
     path: '/admin',
+    adminOnly: true,
+  },
+  {
+    id: 'admin-users',
+    label: 'Users',
+    icon: Users,
+    path: '/admin/users',
+    adminOnly: true,
+  },
+  {
+    id: 'admin-channels',
+    label: 'Channels',
+    icon: FolderOpen,
+    path: '/admin/channels',
+    adminOnly: true,
+  },
+  {
+    id: 'admin-files',
+    label: 'File Management',
+    icon: FileText,
+    path: '/admin/files',
+    adminOnly: true,
+  },
+  {
+    id: 'admin-analytics',
+    label: 'Analytics',
+    icon: Activity,
+    path: '/admin/analytics',
+    adminOnly: true,
+  },
+  {
+    id: 'admin-settings',
+    label: 'System Settings',
+    icon: Settings,
+    path: '/admin/settings',
     adminOnly: true,
   },
 ];
@@ -117,6 +156,10 @@ const Navigation: React.FC<NavigationProps> = ({ className }) => {
     if (item.path.includes('?tab=')) {
       const [path, query] = item.path.split('?');
       return location.pathname === path && location.search.includes(query);
+    }
+    // For admin routes, match exact path
+    if (item.path.startsWith('/admin')) {
+      return location.pathname === item.path;
     }
     return location.pathname === item.path;
   };
@@ -256,10 +299,10 @@ const Navigation: React.FC<NavigationProps> = ({ className }) => {
       </div>
 
       {/* Desktop Sidebar Navigation */}
-      <div className={cn('hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0', className)}>
+      <div className={cn('hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:z-50', className)}>
         <div 
           className={cn(
-            'flex flex-col bg-white border-r border-gray-200 transition-all duration-300',
+            'flex flex-col h-full bg-white border-r border-gray-200 transition-all duration-300',
             isSidebarCollapsed ? 'w-16' : 'w-64'
           )}
           role="navigation"

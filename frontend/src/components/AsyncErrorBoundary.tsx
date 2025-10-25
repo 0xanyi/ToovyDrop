@@ -88,7 +88,7 @@ const AsyncErrorBoundary: React.FC<AsyncErrorBoundaryProps> = ({
 
   return (
     <ErrorBoundary
-      onError={(error, errorInfo) => {
+      onError={(error, _errorInfo) => {
         onError?.(error);
       }}
       resetKeys={resetKeys}

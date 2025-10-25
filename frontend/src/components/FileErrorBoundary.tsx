@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { FileX, RefreshCw, AlertTriangle } from 'lucide-react';
+import { FileX, RefreshCw } from 'lucide-react';
 import Button from './Button';
 import ErrorBoundary from './ErrorBoundary';
 

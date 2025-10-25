@@ -20,7 +20,7 @@ const RetryButton: React.FC<RetryButtonProps> = ({
   onRetry,
   disabled = false,
   maxRetries = 3,
-  retryDelay = 1000,
+  retryDelay: _retryDelay = 1000,
   className,
   size = 'md',
   variant = 'secondary',

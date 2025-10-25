@@ -41,16 +41,14 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className }) => {
     }
     // Handle admin routes
     else if (pathSegments[0] === 'admin') {
-      breadcrumbItems.push({ label: 'Admin Panel', path: '/admin' });
-      
       if (pathSegments.length > 1) {
         const adminSection = pathSegments[1];
         const sectionLabels: Record<string, string> = {
           users: 'User Management',
           channels: 'Channel Management',
-          files: 'File Administration',
+          files: 'File Management',
           settings: 'System Settings',
-          analytics: 'Analytics',
+          analytics: 'Analytics Dashboard',
         };
         
         breadcrumbItems.push({ 
@@ -58,7 +56,7 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className }) => {
           isActive: true 
         });
       } else {
-        breadcrumbItems[breadcrumbItems.length - 1].isActive = true;
+        breadcrumbItems.push({ label: 'Admin Overview', isActive: true });
       }
     }
 

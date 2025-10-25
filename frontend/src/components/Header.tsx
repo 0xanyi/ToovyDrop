@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+
 import { cn, flex, transitions } from '../design-system/utils';
 import { Channel } from '../types';
 import Breadcrumb from './Breadcrumb';
@@ -9,7 +9,6 @@ import {
   User, 
   Settings, 
   LogOut, 
-  Shield,
   Check,
   Hash
 } from 'lucide-react';
@@ -20,8 +19,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ className, showBreadcrumb = true }) => {
-  const { user, logout, isAdmin } = useAuth();
-  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isChannelDropdownOpen, setIsChannelDropdownOpen] = useState(false);
   const [selectedChannelId, setSelectedChannelId] = useState<string>('');
@@ -240,18 +238,7 @@ const Header: React.FC<HeaderProps> = ({ className, showBreadcrumb = true }) => 
                                 Settings
                               </button>
 
-                              {isAdmin() && (
-                                <button
-                                  onClick={() => {
-                                    setIsProfileDropdownOpen(false);
-                                    navigate('/admin');
-                                  }}
-                                  className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                >
-                                  <Shield className="w-4 h-4 mr-3 text-gray-400" />
-                                  Admin Panel
-                                </button>
-                              )}
+
 
                               <div className="border-t border-gray-100 my-1" />
 
