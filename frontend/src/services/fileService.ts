@@ -10,6 +10,10 @@ import {
 } from '../types';
 
 export class FileService {
+  private get client() {
+    return apiService.client;
+  }
+
   async getFiles(
     page: number = 1,
     limit: number = 20,
@@ -139,6 +143,34 @@ export class FileService {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
     const endpoint = download ? 'download' : 'view';
     return `${apiUrl}/api/files/${fileId}/${endpoint}`;
+  }
+
+  async getThumbnailBlob(fileId: string, size: 'small' | 'medium' | 'large' = 'medium'): Promise<string> {
+    try {
+      const response = await this.client.get(`/files/${fileId}/thumbnail?size=${size}`, {
+        responseType: 'blob'
+      });
+
+      // Create blob URL for the image
+      const blob = new Blob([response.data]);
+      return window.URL.createObjectURL(blob);
+    } catch (error) {
+      throw new Error('Failed to load thumbnail');
+    }
+  }
+
+  async getFileServeBlob(fileId: string): Promise<string> {
+    try {
+      const response = await this.client.get(`/files/${fileId}/serve`, {
+        responseType: 'blob'
+      });
+
+      // Create blob URL for the file
+      const blob = new Blob([response.data]);
+      return window.URL.createObjectURL(blob);
+    } catch (error) {
+      throw new Error('Failed to load file');
+    }
   }
 
   generateThumbnailUrl(fileId: string, size: 'small' | 'medium' | 'large' = 'medium'): string {

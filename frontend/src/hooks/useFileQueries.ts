@@ -65,14 +65,7 @@ export const useFileThumbnail = (
   return useQuery({
     queryKey: queryKeys.files.thumbnail(fileId, size),
     queryFn: async () => {
-      const url = fileService.generateThumbnailUrl(fileId, size);
-      // Pre-load the image to cache it in browser
-      return new Promise<string>((resolve, reject) => {
-        const img = new window.Image();
-        img.onload = () => resolve(url);
-        img.onerror = () => reject(new Error('Failed to load thumbnail'));
-        img.src = url;
-      });
+      return await fileService.getThumbnailBlob(fileId, size);
     },
     enabled: enabled && !!fileId,
     ...cacheConfig.thumbnails,
@@ -290,13 +283,7 @@ export const usePrefetchFileThumbnail = () => {
       queryClient.prefetchQuery({
         queryKey: queryKeys.files.thumbnail(fileId, size),
         queryFn: async () => {
-          const url = fileService.generateThumbnailUrl(fileId, size);
-          return new Promise<string>((resolve, reject) => {
-            const img = new window.Image();
-            img.onload = () => resolve(url);
-            img.onerror = () => reject(new Error('Failed to load thumbnail'));
-            img.src = url;
-          });
+          return await fileService.getThumbnailBlob(fileId, size);
         },
         ...cacheConfig.thumbnails,
       });

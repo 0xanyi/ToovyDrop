@@ -31,6 +31,7 @@ import { fileService } from '../services/fileService';
 import { File as FileType, FileFilters } from '../types';
 import { useSwipeGestures, useIsMobile, useIsTouchDevice } from '../hooks/useSwipeGestures';
 import { useScreenReader, generateId } from '../hooks/useAccessibility';
+import { useFileThumbnail } from '../hooks/useFileQueries';
 import { cn } from '../design-system/utils';
 import toast from 'react-hot-toast';
 import RenameFileModal from './RenameFileModal';
@@ -78,7 +79,6 @@ const FileItem: React.FC<FileItemProps> = ({
   style
 }) => {
   const [showMenu, setShowMenu] = useState(false);
-  const [imageError, setImageError] = useState(false);
   const isMobile = useIsMobile();
   const isTouchDevice = useIsTouchDevice();
 
@@ -121,7 +121,22 @@ const FileItem: React.FC<FileItemProps> = ({
 
   const isPreviewable = fileService.isPreviewable(file.mimeType);
   const isImage = file.mimeType?.startsWith('image/');
-  const thumbnailUrl = isImage ? fileService.generateThumbnailUrl(file.id) : null;
+  
+  // Use the thumbnail hook for authenticated requests
+  const { data: thumbnailUrl, isError: imageError } = useFileThumbnail(
+    file.id, 
+    'medium', 
+    isImage
+  );
+
+  // Cleanup blob URL when component unmounts or URL changes
+  useEffect(() => {
+    return () => {
+      if (thumbnailUrl && thumbnailUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(thumbnailUrl);
+      }
+    };
+  }, [thumbnailUrl]);
 
   // Card view
   if (view === 'card') {
@@ -270,7 +285,7 @@ const FileItem: React.FC<FileItemProps> = ({
                   src={thumbnailUrl}
                   alt={file.originalName}
                   className="w-full h-full object-cover"
-                  onError={() => setImageError(true)}
+
                 />
               </div>
             ) : (
@@ -367,7 +382,6 @@ const FileItem: React.FC<FileItemProps> = ({
                 src={thumbnailUrl}
                 alt={file.originalName}
                 className="w-full h-full object-cover"
-                onError={() => setImageError(true)}
               />
             </div>
           ) : (
@@ -426,7 +440,6 @@ const FileItem: React.FC<FileItemProps> = ({
                 src={thumbnailUrl}
                 alt={file.originalName}
                 className="w-full h-full object-cover"
-                onError={() => setImageError(true)}
               />
             </div>
           ) : (

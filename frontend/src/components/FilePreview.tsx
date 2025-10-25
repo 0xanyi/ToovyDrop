@@ -40,6 +40,15 @@ const FilePreviewModal: React.FC<FilePreviewProps> = ({
     }
   }, [file, isOpen]);
 
+  // Cleanup blob URL when component unmounts or preview changes
+  useEffect(() => {
+    return () => {
+      if (preview?.url && preview.url.startsWith('blob:')) {
+        URL.revokeObjectURL(preview.url);
+      }
+    };
+  }, [preview?.url]);
+
   const loadPreview = useCallback(async () => {
     if (!file) return;
 
@@ -47,7 +56,17 @@ const FilePreviewModal: React.FC<FilePreviewProps> = ({
       setLoading(true);
       setError(null);
       const previewData = await fileService.getFilePreview(file.id);
-      setPreview(previewData);
+      
+      // Get the authenticated blob URL for the file content
+      const blobUrl = await fileService.getFileServeBlob(file.id);
+      
+      // Replace the direct URL with the blob URL
+      const authenticatedPreview = {
+        ...previewData,
+        url: blobUrl
+      };
+      
+      setPreview(authenticatedPreview);
       setRetryCount(0); // Reset retry count on success
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load preview';
