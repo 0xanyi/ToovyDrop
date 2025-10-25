@@ -365,12 +365,18 @@ export class ChannelService {
   }
 
   /**
-   * Delete channel (soft delete)
+   * Delete channel and clean up associated resources
    */
   async deleteChannel(id: string): Promise<ApiResponse<{ success: boolean }>> {
     try {
       const channel = await this.prisma.channel.findUnique({
-        where: { id }
+        where: { id },
+        include: {
+          files: {
+            where: { isActive: true },
+            select: { id: true, filename: true }
+          }
+        }
       });
 
       if (!channel) {
@@ -383,10 +389,45 @@ export class ChannelService {
         };
       }
 
-      // Soft delete the channel
-      await this.prisma.channel.update({
-        where: { id },
-        data: { isActive: false }
+      // Import FileService for FTP operations
+      const { FileService } = await import('../services/fileService');
+      const fileService = new FileService(this.prisma);
+
+      // First, delete all files in the channel
+      if (channel.files.length > 0) {
+        console.log(`Deleting ${channel.files.length} files from channel ${channel.name}`);
+        
+        for (const file of channel.files) {
+          try {
+            await fileService.deleteFile(file.id, 'system'); // Use 'system' as userId for channel deletion
+          } catch (error) {
+            console.error(`Failed to delete file ${file.filename}:`, error);
+            // Continue with other files even if one fails
+          }
+        }
+      }
+
+      // Delete the channel directory from FTP
+      try {
+        await fileService.connectToFtp();
+        const channelPath = `/${channel.slug}`;
+        
+        try {
+          await fileService.ftpClientInstance.removeDir(channelPath);
+          console.log(`Successfully deleted channel directory from FTP: ${channelPath}`);
+        } catch (ftpError) {
+          console.error(`Error deleting channel directory from FTP: ${channelPath}`, ftpError);
+          // Continue with database deletion even if FTP deletion fails
+        }
+        
+        await fileService.disconnectFromFtp();
+      } catch (error) {
+        console.error('Error with FTP operations during channel deletion:', error);
+      }
+
+      // Finally, delete the channel from database (hard delete since files are already cleaned up)
+      await this.prisma.channel.delete({
+        where: { id }
       });
 
       return {

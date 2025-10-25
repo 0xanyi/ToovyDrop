@@ -120,16 +120,16 @@ router.get('/files', getAdminFiles);
 router.get('/files/storage-stats', getStorageStats);
 
 /**
- * GET /api/admin/files/:id
- * Get file by ID for admin
- */
-router.get('/files/:id', getAdminFileById);
-
-/**
  * POST /api/admin/files/bulk-operation
  * Perform bulk operations on files
  * Body: { operation: 'delete' | 'move' | 'updateMetadata', fileIds: string[], payload?: any }
  */
 router.post('/files/bulk-operation', bulkFileOperation);
+
+/**
+ * GET /api/admin/files/:id
+ * Get file by ID for admin
+ */
+router.get('/files/:id', getAdminFileById);
 
 export default router;

@@ -15,7 +15,8 @@
     "prisma:push": "prisma db push",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "create-admin": "ts-node src/scripts/createAdmin.ts"
+    "create-admin": "ts-node src/scripts/createAdmin.ts",
+    "cleanup:orphaned-files": "ts-node src/scripts/cleanupOrphanedFiles.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.17.0",

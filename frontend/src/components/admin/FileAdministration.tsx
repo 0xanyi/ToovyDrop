@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ApiResponse } from '../../types';
 import Button from '../Button';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   FileText,
   Search,
@@ -94,6 +95,7 @@ interface SortConfig {
 
 const FileAdministration: React.FC = () => {
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  const { user } = useAuth();
   
   // Helper function to get auth token
   const getAuthToken = (): string | null => {
@@ -108,6 +110,32 @@ const FileAdministration: React.FC = () => {
       }
     }
     return null;
+  };
+
+  // Helper function to get CSRF token
+  const getCsrfToken = async (): Promise<string> => {
+    const response = await fetch(`${apiUrl}/api/security/csrf-token`, {
+      headers: {
+        'Authorization': `Bearer ${getAuthToken()}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch CSRF token');
+    }
+
+    const data = await response.json();
+    return data.data.token;
+  };
+
+  // Helper function to get headers with auth and CSRF tokens
+  const getAuthHeadersWithCsrf = async (): Promise<HeadersInit> => {
+    const csrfToken = await getCsrfToken();
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getAuthToken()}`,
+      'x-csrf-token': csrfToken
+    };
   };
 
   const [files, setFiles] = useState<AdminFile[]>([]);
@@ -227,24 +255,45 @@ const FileAdministration: React.FC = () => {
       return;
     }
 
+    // Check if user is admin
+    if (user?.role !== 'ADMIN') {
+      alert('You must be an admin to perform bulk operations');
+      return;
+    }
+
     try {
       setIsDeleting(true);
 
-      // Note: This endpoint would need to be implemented
-      const response = await fetch(`${apiUrl}/api/admin/files/bulk-delete`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getAuthToken()}`
-        },
-        body: JSON.stringify({ fileIds: Array.from(selectedFiles) })
-      }).then(res => res.json());
+      const token = getAuthToken();
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
 
-      if (response.success) {
+      const response = await fetch(`${apiUrl}/api/admin/files/bulk-operation`, {
+        method: 'POST',
+        headers: await getAuthHeadersWithCsrf(),
+        body: JSON.stringify({ 
+          operation: 'delete',
+          fileIds: Array.from(selectedFiles) 
+        })
+      });
+
+      const responseData = await response.json();
+
+      if (responseData.success) {
         setSelectedFiles(new Set());
         fetchFiles();
+        
+        // Show success message
+        const deletedCount = responseData.data?.affectedCount || selectedFiles.size;
+        alert(`Successfully deleted ${deletedCount} file(s) from both database and FTP server.`);
+      } else if (response.status === 207) {
+        // Partial success - some files deleted, some failed
+        setSelectedFiles(new Set());
+        fetchFiles();
+        alert(`Partial success: ${responseData.error?.message || 'Some files could not be deleted'}`);
       } else {
-        throw new Error(response.error?.message || 'Failed to delete files');
+        throw new Error(responseData.error?.message || 'Failed to delete files');
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to delete files');
@@ -259,12 +308,14 @@ const FileAdministration: React.FC = () => {
     }
 
     try {
-      // Note: This endpoint would need to be implemented
-      const response = await fetch(`${apiUrl}/api/admin/files/${fileId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${getAuthToken()}`
-        }
+      // Use bulk operation endpoint for single file deletion
+      const response = await fetch(`${apiUrl}/api/admin/files/bulk-operation`, {
+        method: 'POST',
+        headers: await getAuthHeadersWithCsrf(),
+        body: JSON.stringify({ 
+          operation: 'delete',
+          fileIds: [fileId] 
+        })
       }).then(res => res.json());
 
       if (response.success) {

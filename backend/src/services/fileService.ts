@@ -40,6 +40,13 @@ export class FileService {
   }
 
   /**
+   * Get FTP client for advanced operations
+   */
+  get ftpClientInstance(): ftp.Client {
+    return this.ftpClient;
+  }
+
+  /**
    * Establishes connection to FTP server
    */
   async connectToFtp(): Promise<void> {

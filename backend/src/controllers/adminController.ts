@@ -379,13 +379,48 @@ export const bulkFileOperation = async (req: AuthenticatedRequest, res: Response
     let result;
 
     switch (operation) {
-      case 'delete':
-        // Soft delete files
-        result = await prisma.file.updateMany({
+      case 'delete': {
+        // Get file information for FTP deletion
+        const files = await prisma.file.findMany({
           where: { id: { in: fileIds } },
-          data: { isActive: false }
+          select: { id: true, ftpPath: true, filename: true }
         });
+
+        if (files.length === 0) {
+          throw new AppError('No files found to delete', 404, 'NOT_FOUND');
+        }
+
+        // Import FileService for FTP operations
+        const { FileService } = await import('../services/fileService');
+        const fileService = new FileService(prisma);
+
+        // Delete each file properly (from both FTP and database)
+        let successCount = 0;
+        const errors: string[] = [];
+
+        for (const file of files) {
+          try {
+            await fileService.deleteFile(file.id, req.user!.id);
+            successCount++;
+          } catch (error) {
+            const errorMsg = `Failed to delete ${file.filename}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            errors.push(errorMsg);
+            console.error(errorMsg);
+          }
+        }
+
+        result = { count: successCount };
+
+        // If some deletions failed, include error information
+        if (errors.length > 0) {
+          throw new AppError(
+            `Deleted ${successCount} of ${files.length} files. Errors: ${errors.join('; ')}`,
+            207, // Multi-Status
+            'PARTIAL_SUCCESS'
+          );
+        }
         break;
+      }
 
       case 'move': {
         if (!payload.channelId) {

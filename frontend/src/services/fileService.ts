@@ -93,13 +93,9 @@ export class FileService {
   }
 
   async deleteMultipleFiles(fileIds: string[]): Promise<void> {
-    const response: ApiResponse<void> = await apiService.post('/files/bulk-delete', {
-      fileIds
-    });
-
-    if (!response.success) {
-      throw new Error(response.error?.message || 'Failed to delete files');
-    }
+    // Since there's no bulk delete endpoint for regular users, delete files individually
+    const deletePromises = fileIds.map(fileId => this.deleteFile(fileId));
+    await Promise.all(deletePromises);
   }
 
   async renameFile(fileId: string, newName: string): Promise<void> {
