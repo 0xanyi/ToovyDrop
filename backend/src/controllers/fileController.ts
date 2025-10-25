@@ -81,6 +81,10 @@ const searchFilesSchema = Joi.object({
   channelId: Joi.string().uuid().required(),
 });
 
+const renameFileSchema = Joi.object({
+  newName: Joi.string().required().max(255).min(1),
+});
+
 /**
  * Initialize a new file upload session
  */
@@ -289,7 +293,7 @@ export const uploadChunk = async (req: AuthenticatedRequest, res: Response) => {
       try {
         const fileSvc = await getFileService();
         const fileId = await fileSvc.uploadToFtp({
-          filename: uploadData.filename,
+          filename: uploadData.originalFilename,
           mimeType: uploadData.mimeType,
           size: uploadData.size,
           totalBytes: uploadData.size,
@@ -553,6 +557,53 @@ export const deleteFile = async (req: AuthenticatedRequest, res: Response) => {
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to delete file',
+    });
+  }
+};
+
+/**
+ * Rename a file
+ */
+export const renameFile = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { fileId } = req.params;
+    const { error, value } = renameFileSchema.validate(req.body);
+    
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        details: error.details.map(d => d.message),
+      });
+    }
+
+    const { newName } = value;
+    const userId = req.user!.id;
+
+    const fileSvc = await getFileService();
+    await fileSvc.renameFile(fileId, newName, userId);
+
+    logger.info(`File renamed: ${fileId} to ${newName} by user ${userId}`);
+
+    await auditService.recordEvent({
+      action: 'FILE_RENAME',
+      actorId: userId,
+      actorEmail: req.user?.email,
+      entityType: 'FILE',
+      entityId: fileId,
+      metadata: { newName },
+      ipAddress: req.ip,
+    });
+
+    res.json({
+      success: true,
+      message: 'File renamed successfully',
+    });
+  } catch (error) {
+    logger.error('Error renaming file:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to rename file',
     });
   }
 };

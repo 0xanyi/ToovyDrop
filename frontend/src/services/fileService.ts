@@ -102,6 +102,16 @@ export class FileService {
     }
   }
 
+  async renameFile(fileId: string, newName: string): Promise<void> {
+    const response: ApiResponse<void> = await apiService.patch(`/files/${fileId}/rename`, {
+      newName
+    });
+
+    if (!response.success) {
+      throw new Error(response.error?.message || 'Failed to rename file');
+    }
+  }
+
   async moveFiles(fileIds: string[], channelId: string): Promise<void> {
     const response: ApiResponse<void> = await apiService.post('/files/move', {
       fileIds,

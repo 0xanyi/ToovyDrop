@@ -5,6 +5,8 @@ import Button from '../components/Button';
 import FileUpload from '../components/FileUpload';
 import FileList from '../components/FileList';
 import FilePreviewModal from '../components/FilePreview';
+import RenameFileModal from '../components/RenameFileModal';
+import { fileService } from '../services/fileService';
 import { Upload, FolderOpen, Settings, LogOut, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -16,6 +18,8 @@ const DashboardPage: React.FC = () => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [currentFileIndex, setCurrentFileIndex] = useState(0);
   const [allFiles, setAllFiles] = useState<FileType[]>([]);
+  const [renameModalOpen, setRenameModalOpen] = useState(false);
+  const [fileToRename, setFileToRename] = useState<FileType | null>(null);
 
   const handleLogout = async () => {
     await logout();
@@ -25,6 +29,24 @@ const DashboardPage: React.FC = () => {
     setSelectedFile(file);
     setCurrentFileIndex(allFiles.findIndex(f => f.id === file.id));
     setIsPreviewOpen(true);
+  };
+
+  const handleRename = (file: FileType) => {
+    setFileToRename(file);
+    setRenameModalOpen(true);
+  };
+
+  const handleRenameSubmit = async (newName: string) => {
+    if (!fileToRename) return;
+
+    try {
+      await fileService.renameFile(fileToRename.id, newName);
+      // Refresh the file list to get updated names
+      // For now, let's just close the modal and the list will refresh on next load
+      setRenameModalOpen(false);
+    } catch (error) {
+      console.error('Rename failed:', error);
+    }
   };
 
   const handleUploadComplete = (_fileId: string, _fileData: any) => {
@@ -183,6 +205,7 @@ const DashboardPage: React.FC = () => {
                   channelId={defaultChannelId}
                   onFileSelect={handleFileSelect}
                   onFilesChange={setAllFiles}
+                  onRename={handleRename}
                 />
               ) : (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
@@ -217,6 +240,17 @@ const DashboardPage: React.FC = () => {
         onPrevious={handlePreviousFile}
         hasNext={currentFileIndex < allFiles.length - 1}
         hasPrevious={currentFileIndex > 0}
+      />
+
+      {/* Rename modal */}
+      <RenameFileModal
+        isOpen={renameModalOpen}
+        currentName={fileToRename?.originalName || ''}
+        onClose={() => {
+          setRenameModalOpen(false);
+          setFileToRename(null);
+        }}
+        onRename={handleRenameSubmit}
       />
     </div>
   );

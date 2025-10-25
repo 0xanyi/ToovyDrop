@@ -91,6 +91,7 @@ export class FileService {
    */
   async uploadToFtp(options: FileUploadOptions): Promise<string> {
     const uploadId = uuidv4();
+    // Use original filename without ID prefix
     const sanitizedFilename = sanitizeFilename(options.filename);
     
     logger.info(`Starting FTP upload for file: ${options.filename} (size: ${options.size} bytes)`);
@@ -455,5 +456,67 @@ export class FileService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  /**
+   * Renames a file
+   */
+  async renameFile(fileId: string, newName: string, userId: string): Promise<void> {
+    try {
+      // Get file information
+      const file = await this.prisma.file.findUnique({
+        where: { id: fileId },
+        include: { channel: true },
+      });
+
+      if (!file) {
+        throw new Error('File not found');
+      }
+
+      // Check user permissions
+      const userChannel = await this.prisma.userChannel.findFirst({
+        where: { userId, channelId: file.channelId },
+      });
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!userChannel && user?.role !== 'ADMIN') {
+        throw new Error('Access denied to rename this file');
+      }
+
+      // Sanitize new filename
+      const sanitizedNewName = sanitizeFilename(newName);
+      const newFtpPath = path.posix.join(file.channel.ftpPath, sanitizedNewName);
+
+      // Rename on FTP server
+      await this.connectToFtp();
+      
+      try {
+        await this.ftpClient.rename(file.ftpPath, newFtpPath);
+        logger.info(`Successfully renamed file on FTP: ${file.ftpPath} -> ${newFtpPath}`);
+      } catch (error) {
+        logger.error('Error renaming file on FTP:', error);
+        throw new Error('Failed to rename file on FTP server');
+      } finally {
+        await this.disconnectFromFtp();
+      }
+
+      // Update database
+      await this.prisma.file.update({
+        where: { id: fileId },
+        data: {
+          filename: sanitizedNewName,
+          originalName: newName,
+          ftpPath: newFtpPath,
+        },
+      });
+
+      logger.info(`Successfully renamed file in database: ${fileId}`);
+    } catch (error) {
+      logger.error('Error renaming file:', error);
+      throw error;
+    }
   }
 }
