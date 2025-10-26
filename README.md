@@ -39,7 +39,7 @@ A modern web-based file transfer platform with user authentication, channel-base
 - **Comprehensive admin dashboard** with real-time statistics
 - **User management** with role assignment and channel access control
 - **System configuration** interface for application settings
-- **Login background customization** - upload custom branding images
+- **Login background customization** - set custom branding images via CDN URLs
 - **Analytics and reporting** with charts and metrics
 - **Audit logging** for compliance and security tracking
 - **Guest link management** for temporary upload access
@@ -241,10 +241,9 @@ channeldrop/
 
 ### System Settings
 
-- `GET /api/settings/login-background` - Get current login background (public)
-- `GET /api/settings/login-background/image` - Serve login background image (public)
-- `POST /api/settings/login-background` - Upload login background image (admin only)
-- `DELETE /api/settings/login-background` - Delete login background image (admin only)
+- `GET /api/settings/login-background` - Get current login background URL (public)
+- `POST /api/settings/login-background` - Set login background image URL (admin only)
+- `DELETE /api/settings/login-background` - Remove login background URL (admin only)
 
 ### Guest Link Management (Phase VI)
 

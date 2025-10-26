@@ -6,7 +6,7 @@ import Button from '../components/Button';
 import Input from '../components/Input';
 import toast from 'react-hot-toast';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
-import { getLoginBackground, getLoginBackgroundImageUrl } from '../services/settingsService';
+import { getLoginBackground } from '../services/settingsService';
 
 interface LoginFormData {
   email: string;
@@ -30,8 +30,8 @@ const LoginPage: React.FC = () => {
     const fetchBackground = async () => {
       try {
         const background = await getLoginBackground();
-        if (background) {
-          setBackgroundImage(getLoginBackgroundImageUrl());
+        if (background?.url) {
+          setBackgroundImage(background.url);
         }
       } catch (error) {
         console.error('Error fetching login background:', error);
