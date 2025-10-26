@@ -4,7 +4,6 @@ import { ApiResponse, GuestUploadLink } from '../../types';
 import Button from '../Button';
 import Modal from '../Modal';
 import {
-  Link,
   Calendar,
   Hash,
   FolderOpen,

@@ -3,13 +3,10 @@ import { adminService } from '../../services/adminService';
 import { ApiResponse } from '../../types';
 import Button from '../Button';
 import {
-  BarChart3 as _BarChart3,
-  TrendingUp as _TrendingUp,
   Users,
   FolderOpen,
   HardDrive,
   Clock,
-  Calendar as _Calendar,
   Activity,
   FileText,
   ArrowUp,
@@ -27,6 +24,8 @@ interface AnalyticsData {
     activeChannels: number;
     uploadsToday: number;
     uploadsThisWeek: number;
+    guestLinksActive: number;
+    guestUploadsInPeriod: number;
   };
   storageUsage: {
     totalSize: number;
@@ -43,6 +42,8 @@ interface AnalyticsData {
       channelName: string;
       size: number;
       count: number;
+      guestUploads: number;
+      guestSize: number;
       percentage: number;
     }>;
   };
@@ -90,6 +91,9 @@ interface AnalyticsData {
       fileCount: number;
       totalSize: number;
       userCount: number;
+      guestLinkCount: number;
+      guestFileCount: number;
+      guestStorageSize: number;
       lastActivity: string;
     }>;
     channelsByUsage: Array<{
@@ -97,6 +101,26 @@ interface AnalyticsData {
       count: number;
       percentage: number;
     }>;
+  };
+  
+  guestLinkActivity?: {
+    totalActiveLinks: number;
+    totalGuestUploads: number;
+    totalGuestStorage: number;
+    topGuestLinks: Array<{
+      id: string;
+      description: string;
+      channelName: string;
+      uploadCount: number;
+      maxUploads: number;
+      storageUsed: number;
+      expiresAt: string | null;
+      createdAt: string;
+      isExpired: boolean;
+      isLimitReached: boolean;
+    }>;
+    expiringLinks: number;
+    limitReachedLinks: number;
   };
 }
 

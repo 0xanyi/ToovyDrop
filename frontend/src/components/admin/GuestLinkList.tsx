@@ -5,7 +5,6 @@ import Button from '../Button';
 import {
   Link,
   Calendar,
-  Hash,
   FolderOpen,
   Edit,
   Trash2,

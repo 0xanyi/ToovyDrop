@@ -445,7 +445,7 @@ export class AdminService {
         if (file.uploadedByGuest) {
           acc[date].guestUploads++;
           acc[date].guestSize += file.size;
-        } else {
+        } else if (file.uploadedBy) {
           acc[date].users.add(file.uploadedBy);
         }
         return acc;
