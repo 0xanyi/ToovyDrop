@@ -47,7 +47,6 @@ export interface GuestUploadError extends Error {
 
 export class GuestUploadService {
   private client: AxiosInstance;
-  private CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks - will be updated from server config
 
   constructor() {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -155,7 +154,7 @@ export class GuestUploadService {
     file: File,
     maxFileSize?: number,
     onProgress?: (progress: UploadProgress) => void,
-    chunkSize?: number
+    _chunkSize?: number
   ): Promise<GuestUploadResult> {
     // Validate file before upload
     const validationError = this.validateFile(file, maxFileSize);
@@ -164,10 +163,6 @@ export class GuestUploadService {
     }
 
     const uploadId = this.generateUploadId();
-    
-    // Use provided chunk size or default
-    const actualChunkSize = chunkSize || this.CHUNK_SIZE;
-    const totalChunks = Math.ceil(file.size / actualChunkSize);
 
     // Create upload progress tracking
     const uploadProgress: UploadProgress = {
@@ -183,75 +178,74 @@ export class GuestUploadService {
     };
 
     try {
-      // Upload file in chunks
-      for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
-        const start = chunkIndex * actualChunkSize;
-        const end = Math.min(start + actualChunkSize, file.size);
-        const chunk = file.slice(start, end);
+      // Create FormData for single file upload
+      const formData = new FormData();
+      formData.append('file', file);
 
-        // Create FormData for chunk upload
-        const formData = new FormData();
-        formData.append('chunk', chunk);
-        formData.append('chunkIndex', chunkIndex.toString());
-        formData.append('totalChunks', totalChunks.toString());
-        formData.append('filename', file.name);
-        formData.append('mimeType', file.type);
-        formData.append('totalSize', file.size.toString());
+      const response = await this.client.post<ApiResponse<{ fileId: string; filename: string; size: number; uploadedAt: string; message: string }>>(
+        `/guest-links/${token}/upload`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          timeout: 300000, // 5 minute timeout for large files
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+              const loaded = progressEvent.loaded;
+              const total = progressEvent.total;
+              const percentage = (loaded / total) * 100;
 
-        const response = await this.client.post<ApiResponse<GuestUploadResult>>(
-          `/guest-links/${token}/upload`,
-          formData,
-          {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
-            timeout: 60000, // 60 second timeout for chunk uploads
+              uploadProgress.loaded = loaded;
+              uploadProgress.percentage = percentage;
+
+              // Calculate speed and estimated time remaining
+              const totalElapsed = Date.now() - new Date(uploadProgress.startTime).getTime();
+              uploadProgress.speed = totalElapsed > 0 ? (loaded / totalElapsed) * 1000 : 0;
+
+              if (uploadProgress.speed > 0) {
+                const remainingBytes = total - loaded;
+                uploadProgress.estimatedTimeRemaining = (remainingBytes / uploadProgress.speed) * 1000;
+              }
+
+              if (onProgress) {
+                onProgress(uploadProgress);
+              }
+            }
           }
+        }
+      );
+
+      if (!response.data.success) {
+        const error = this.createGuestUploadError(
+          response.data.error?.code || 'UPLOAD_FAILED',
+          response.data.error?.message || 'Upload failed',
+          true,
+          response.status
         );
-
-        if (!response.data.success) {
-          const error = this.createGuestUploadError(
-            response.data.error?.code || 'UPLOAD_FAILED',
-            response.data.error?.message || 'Upload failed',
-            true,
-            response.status
-          );
-          throw error;
-        }
-
-        // Update progress
-        const bytesUploaded = end;
-        uploadProgress.loaded = bytesUploaded;
-        uploadProgress.percentage = (bytesUploaded / file.size) * 100;
-
-        // Calculate speed and estimated time remaining
-        const totalElapsed = Date.now() - new Date(uploadProgress.startTime).getTime();
-        uploadProgress.speed = totalElapsed > 0 ? (bytesUploaded / totalElapsed) * 1000 : 0;
-
-        if (uploadProgress.speed > 0) {
-          const remainingBytes = file.size - bytesUploaded;
-          uploadProgress.estimatedTimeRemaining = (remainingBytes / uploadProgress.speed) * 1000;
-        }
-
-        if (onProgress) {
-          onProgress(uploadProgress);
-        }
-
-        // Check if upload is complete
-        if (response.data.data?.success && chunkIndex === totalChunks - 1) {
-          uploadProgress.status = 'completed';
-          uploadProgress.percentage = 100;
-          uploadProgress.loaded = file.size;
-
-          if (onProgress) {
-            onProgress(uploadProgress);
-          }
-
-          return response.data.data;
-        }
+        throw error;
       }
 
-      throw new Error('Upload completed but no success response received');
+      // Mark upload as completed
+      uploadProgress.status = 'completed';
+      uploadProgress.percentage = 100;
+      uploadProgress.loaded = file.size;
+
+      if (onProgress) {
+        onProgress(uploadProgress);
+      }
+
+      return {
+        success: true,
+        fileId: response.data.data?.fileId,
+        file: {
+          id: response.data.data?.fileId || '',
+          filename: response.data.data?.filename || file.name,
+          originalName: file.name,
+          size: file.size,
+          mimeType: file.type
+        }
+      };
     } catch (error) {
       uploadProgress.status = 'error';
       

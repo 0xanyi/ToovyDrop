@@ -236,7 +236,6 @@ const GuestUploadPage: React.FC = () => {
               <GuestFileUpload
                 token={token!}
                 maxFileSize={linkData?.uploadConfig.maxFileSize}
-                chunkSize={linkData?.uploadConfig.chunkSize}
                 allowedMimeTypes={linkData?.uploadConfig.allowedMimeTypes}
                 onUploadComplete={handleUploadComplete}
                 onUploadStart={handleUploadStart}

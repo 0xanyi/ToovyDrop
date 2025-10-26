@@ -117,7 +117,7 @@ export class FileService {
       size: BigInt(options.size),
       ftpPath,
       channelId: options.channelId,
-      uploadedBy: options.uploadedBy,
+      uploadedBy: options.isGuestUpload ? null : options.uploadedBy, // Set to null for guest uploads
       uploadedByGuest: options.isGuestUpload || false,
       guestUploadLinkId: options.guestUploadLinkId,
     };

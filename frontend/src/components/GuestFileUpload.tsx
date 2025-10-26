@@ -9,7 +9,6 @@ import ProgressIndicator from './ProgressIndicator';
 interface GuestFileUploadProps {
   token: string;
   maxFileSize?: number;
-  chunkSize?: number;
   allowedMimeTypes?: string[];
   onUploadComplete?: (result: { success: boolean; fileId?: string; fileName?: string; error?: string; retryable?: boolean }) => void;
   onUploadStart?: () => void;
@@ -32,7 +31,6 @@ interface FileUploadState {
 const GuestFileUpload: React.FC<GuestFileUploadProps> = ({
   token,
   maxFileSize,
-  chunkSize,
   allowedMimeTypes,
   onUploadComplete,
   onUploadStart,
@@ -157,8 +155,7 @@ const GuestFileUpload: React.FC<GuestFileUploadProps> = ({
             ...prev,
             progress
           }));
-        },
-        chunkSize
+        }
       );
 
       const uploadResult = {
