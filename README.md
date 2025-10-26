@@ -34,6 +34,16 @@ A modern web-based file transfer platform with user authentication, channel-base
 - **File download** with proper filename preservation
 - **Secure file deletion** with confirmation dialogs
 
+### Admin & Customization ✅
+
+- **Comprehensive admin dashboard** with real-time statistics
+- **User management** with role assignment and channel access control
+- **System configuration** interface for application settings
+- **Login background customization** - upload custom branding images
+- **Analytics and reporting** with charts and metrics
+- **Audit logging** for compliance and security tracking
+- **Guest link management** for temporary upload access
+
 ### Technical Stack
 
 - Modern, responsive UI built with React and Tailwind CSS
@@ -228,6 +238,13 @@ channeldrop/
 - `GET /api/admin/files/:id` - Get file details for admin
 - `POST /api/admin/files/bulk-operation` - Perform bulk file operations
 - `GET /api/admin/files/storage-stats` - Get system storage statistics
+
+### System Settings
+
+- `GET /api/settings/login-background` - Get current login background (public)
+- `GET /api/settings/login-background/image` - Serve login background image (public)
+- `POST /api/settings/login-background` - Upload login background image (admin only)
+- `DELETE /api/settings/login-background` - Delete login background image (admin only)
 
 ### Guest Link Management (Phase VI)
 
