@@ -1,7 +1,7 @@
 {
-  "name": "toovydrop-backend",
+  "name": "channeldrop-backend",
   "version": "1.0.0",
-  "description": "Backend for ToovyDrop file transfer platform",
+  "description": "Backend for ChannelDrop file transfer platform",
   "main": "dist/server.js",
   "scripts": {
     "dev": "nodemon src/server.ts",

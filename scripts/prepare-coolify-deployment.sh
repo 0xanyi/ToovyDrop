@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# ToovyDrop Coolify Deployment Preparation Script
+# ChannelDrop Coolify Deployment Preparation Script
 # This script prepares your local environment for Coolify deployment
 
 set -e
 
-echo "🚀 ToovyDrop Coolify Deployment Preparation"
+echo "🚀 ChannelDrop Coolify Deployment Preparation"
 echo "============================================"
 
 # Check if we're in the right directory
@@ -47,13 +47,13 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     # Test backend build
     echo "Building backend..."
     cd backend
-    docker build -f Dockerfile.production -t toovydrop-backend-test .
+    docker build -f Dockerfile.production -t channeldrop-backend-test .
     cd ..
     
     # Test frontend build
     echo "Building frontend..."
     cd frontend
-    docker build -f Dockerfile.production -t toovydrop-frontend-test . \
+    docker build -f Dockerfile.production -t channeldrop-frontend-test . \
         --build-arg VITE_API_URL=https://yourdomain.com/api \
         --build-arg VITE_WS_URL=wss://yourdomain.com
     cd ..
@@ -61,7 +61,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "✅ Docker builds completed successfully"
     
     # Cleanup test images
-    docker rmi toovydrop-backend-test toovydrop-frontend-test
+    docker rmi channeldrop-backend-test channeldrop-frontend-test
 fi
 
 # Validate Coolify deployment configuration
@@ -108,7 +108,7 @@ echo ""
 echo "🔧 Configuration:"
 echo "  □ FTP server details ready (host, credentials, etc.)"
 echo "  □ JWT secrets generated (shown above)"
-echo "  □ Database name decided (default: toovydrop)"
+echo "  □ Database name decided (default: channeldrop)"
 echo ""
 echo "📦 Repository:"
 echo "  □ All changes committed and pushed to Git"

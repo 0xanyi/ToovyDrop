@@ -214,7 +214,7 @@ const Navigation: React.FC<NavigationProps> = ({ className }) => {
                 )}
               </button>
               <div className="flex items-center">
-                <h1 className="text-lg font-semibold text-gray-900">ToovyDrop</h1>
+                <h1 className="text-lg font-semibold text-gray-900">ChannelDrop</h1>
               </div>
             </div>
           </div>
@@ -314,7 +314,7 @@ const Navigation: React.FC<NavigationProps> = ({ className }) => {
           {/* Sidebar Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200">
             {!isSidebarCollapsed && (
-              <h1 className="text-xl font-bold text-gray-900">ToovyDrop</h1>
+              <h1 className="text-xl font-bold text-gray-900">ChannelDrop</h1>
             )}
             <button
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}

@@ -1,6 +1,6 @@
-# ToovyDrop - Coolify Deployment Guide
+# ChannelDrop - Coolify Deployment Guide
 
-This guide provides step-by-step instructions for deploying ToovyDrop to Coolify using individual Docker applications for better management and diagnostics.
+This guide provides step-by-step instructions for deploying ChannelDrop to Coolify using individual Docker applications for better management and diagnostics.
 
 ## Prerequisites
 
@@ -12,7 +12,7 @@ This guide provides step-by-step instructions for deploying ToovyDrop to Coolify
 
 ## Deployment Architecture
 
-ToovyDrop is deployed as **separate applications** in Coolify for easier management:
+ChannelDrop is deployed as **separate applications** in Coolify for easier management:
 - **Frontend Application**: React + Vite (Nginx) - `frontend/Dockerfile.production`
 - **Backend Application**: Node.js + Express API - `backend/Dockerfile.production`
 
@@ -447,7 +447,7 @@ Dragonfly: 256MB RAM, 0.25 CPU
 
 ### Getting Help
 - **Coolify Documentation**: https://coolify.io/docs
-- **ToovyDrop Issues**: GitHub repository issues
+- **ChannelDrop Issues**: GitHub repository issues
 - **Dragonfly Documentation**: https://www.dragonflydb.io/docs
 - **Community Support**: Coolify Discord/Forums
 
@@ -475,7 +475,7 @@ Dragonfly: 256MB RAM, 0.25 CPU
 
 **Individual Application Deployment Complete!** 🚀
 
-Your ToovyDrop platform is now running with:
+Your ChannelDrop platform is now running with:
 - ✅ **Frontend**: `https://yourdomain.com` (Independent Nginx application)
 - ✅ **Backend**: `https://api.yourdomain.com` (Independent Node.js application)  
 - ✅ **Database**: PostgreSQL (Managed or external)

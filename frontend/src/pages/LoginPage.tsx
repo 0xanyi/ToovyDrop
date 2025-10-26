@@ -60,7 +60,7 @@ const LoginPage: React.FC = () => {
               Welcome back
             </h1>
             <p className="text-gray-600 text-sm font-medium">
-              Sign in to ToovyDrop
+              Sign in to ChannelDrop
             </p>
             <p className="text-gray-500 text-xs">
               Secure file transfer and management
@@ -145,7 +145,7 @@ const LoginPage: React.FC = () => {
         {/* Bottom decoration */}
         <div className="mt-8 text-center">
           <p className="text-xs text-gray-400">
-            © 2024 ToovyDrop. All rights reserved.
+            © 2024 ChannelDrop. All rights reserved.
           </p>
         </div>
       </div>

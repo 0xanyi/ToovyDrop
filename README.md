@@ -1,4 +1,4 @@
-# ToovyDrop
+# ChannelDrop
 
 A modern web-based file transfer platform with user authentication, channel-based file organization, and guest upload links.
 
@@ -46,7 +46,7 @@ A modern web-based file transfer platform with user authentication, channel-base
 ## Project Structure
 
 ```
-toovydrop/
+channeldrop/
 ├── backend/                 # Node.js/Express API
 │   ├── src/
 │   │   ├── controllers/     # Route controllers (auth, files, channels, users)
@@ -102,8 +102,8 @@ toovydrop/
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/yourusername/toovydrop.git
-   cd toovydrop
+   git clone https://github.com/yourusername/channeldrop.git
+   cd channeldrop
    ```
 
 2. Copy the environment file:
@@ -468,8 +468,8 @@ The application now includes comprehensive performance monitoring:
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## About ToovyDrop
+## About ChannelDrop
 
-ToovyDrop is part of the Toovy platform ecosystem, providing secure and efficient file transfer solutions for businesses and content creators. Built with modern web technologies and focusing on user experience, ToovyDrop simplifies the complexity of file management while maintaining enterprise-grade security.
+ChannelDrop is a modern web-based file transfer platform designed for content creators, broadcasting organizations, and teams who need to manage and distribute files across multiple channels. Built with modern web technologies and focusing on user experience, ChannelDrop simplifies the complexity of file management while maintaining enterprise-grade security.
 
-For more information about the Toovy platform, visit [toovy.com](https://toovy.com).
+Perfect for TV channels, streaming services, content creators, and organizations managing multiple content channels with team-based access and organization.

@@ -1068,7 +1068,7 @@ export const getSystemConfig = async (req: AuthenticatedRequest, res: Response):
     // In a real implementation, this would come from a database or config file
     const config = {
       general: {
-        siteName: process.env.SITE_NAME || 'ToovyDrop',
+        siteName: process.env.SITE_NAME || 'ChannelDrop',
         siteDescription: process.env.SITE_DESCRIPTION || 'Secure file sharing platform',
         defaultLanguage: process.env.DEFAULT_LANGUAGE || 'en',
         timezone: process.env.TIMEZONE || 'UTC',
@@ -1101,7 +1101,7 @@ export const getSystemConfig = async (req: AuthenticatedRequest, res: Response):
         smtpUser: process.env.SMTP_USER || '',
         smtpPassword: process.env.SMTP_PASSWORD || '',
         fromEmail: process.env.FROM_EMAIL || '',
-        fromName: process.env.FROM_NAME || 'ToovyDrop',
+        fromName: process.env.FROM_NAME || 'ChannelDrop',
         emailNotificationsEnabled: process.env.EMAIL_NOTIFICATIONS_ENABLED !== 'false'
       },
       notifications: {

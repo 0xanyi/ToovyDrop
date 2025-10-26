@@ -13,7 +13,6 @@
 
 import { PrismaClient } from '@prisma/client';
 import GuestLinkCleanupService from '../services/guestLinkCleanupService';
-import logger from '../utils/logger';
 
 async function main() {
   const prisma = new PrismaClient();

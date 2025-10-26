@@ -1,7 +1,7 @@
 {
-  "name": "toovydrop-frontend",
+  "name": "channeldrop-frontend",
   "version": "1.0.0",
-  "description": "Frontend for ToovyDrop file transfer platform",
+  "description": "Frontend for ChannelDrop file transfer platform",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -177,7 +177,7 @@ const SystemConfiguration: React.FC = () => {
         // Use default configuration for now
         setConfig({
           general: {
-            siteName: 'ToovyDrop',
+            siteName: 'ChannelDrop',
             siteDescription: 'Secure file sharing platform',
             defaultLanguage: 'en',
             timezone: 'UTC',
@@ -210,7 +210,7 @@ const SystemConfiguration: React.FC = () => {
             smtpUser: '',
             smtpPassword: '',
             fromEmail: 'noreply@toovydrop.com',
-            fromName: 'ToovyDrop',
+            fromName: 'ChannelDrop',
             emailNotificationsEnabled: false
           },
           notifications: {
@@ -283,7 +283,7 @@ const SystemConfiguration: React.FC = () => {
         },
         body: JSON.stringify({
           to: 'test@example.com',
-          subject: 'Test Email from ToovyDrop',
+          subject: 'Test Email from ChannelDrop',
           message: 'This is a test email to verify your SMTP configuration.'
         })
       }).then(res => res.json());

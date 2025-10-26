@@ -1,6 +1,6 @@
-# ToovyDrop - External Database Setup Guide
+# ChannelDrop - External Database Setup Guide
 
-This guide covers deploying ToovyDrop with external PostgreSQL and Redis services instead of containerized databases. This approach is recommended for production environments requiring high availability, managed backups, and dedicated database resources.
+This guide covers deploying ChannelDrop with external PostgreSQL and Redis services instead of containerized databases. This approach is recommended for production environments requiring high availability, managed backups, and dedicated database resources.
 
 ## Benefits of External Databases
 
@@ -363,4 +363,4 @@ REDIS_URL=redis://:pass@new-redis-host:6379
 
 **External Database Setup Complete!** 🗄️
 
-Your ToovyDrop application will now use dedicated, scalable database services for better performance and reliability.
+Your ChannelDrop application will now use dedicated, scalable database services for better performance and reliability.

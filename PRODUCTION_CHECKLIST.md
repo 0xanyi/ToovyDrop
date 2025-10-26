@@ -1,4 +1,4 @@
-# ToovyDrop Production Deployment Checklist
+# ChannelDrop Production Deployment Checklist
 
 ## 🚀 Pre-Deployment Requirements
 

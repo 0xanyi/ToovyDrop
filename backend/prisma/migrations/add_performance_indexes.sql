@@ -1,4 +1,4 @@
--- Performance optimization indexes for ToovyDrop
+-- Performance optimization indexes for ChannelDrop
 -- These indexes will significantly improve query performance for file operations
 
 -- Index for file listing queries (channel_id + active status + created_at)

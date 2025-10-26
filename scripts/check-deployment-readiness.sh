@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # =============================================================================
-# TOOVYDROP - COOLIFY DEPLOYMENT CHECKLIST SCRIPT
+# CHANNELDROP - COOLIFY DEPLOYMENT CHECKLIST SCRIPT
 # =============================================================================
 # This script helps verify your deployment readiness for Coolify
 # Run this script before deploying to ensure all requirements are met
@@ -57,7 +57,7 @@ check_env_var() {
 # DEPLOYMENT READINESS CHECK
 # =============================================================================
 
-echo "🚀 ToovyDrop Coolify Deployment Readiness Check"
+echo "🚀 ChannelDrop Coolify Deployment Readiness Check"
 echo "=============================================="
 echo
 
@@ -187,7 +187,7 @@ echo
 
 # Final summary
 if [ "$FILES_OK" = true ] && [ "$TOOLS_OK" = true ]; then
-    log_success "🎉 Your ToovyDrop application is ready for Coolify deployment!"
+    log_success "🎉 Your ChannelDrop application is ready for Coolify deployment!"
     echo "   Follow the deployment guide to complete the setup."
 else
     log_warning "⚠️  Please address the issues above before deploying."

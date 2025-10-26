@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# ToovyDrop Production Deployment Script
+# ChannelDrop Production Deployment Script
 set -e
 
-echo "🚀 Starting ToovyDrop Production Deployment..."
+echo "🚀 Starting ChannelDrop Production Deployment..."
 
 # Colors for output
 RED='\033[0;31m'

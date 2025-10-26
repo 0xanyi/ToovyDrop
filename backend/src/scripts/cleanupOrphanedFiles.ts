@@ -8,7 +8,6 @@
 
 import { PrismaClient } from '@prisma/client';
 import { FileService } from '../services/fileService';
-import logger from '../utils/logger';
 import dotenv from 'dotenv';
 
 // Load environment variables

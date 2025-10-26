@@ -89,7 +89,7 @@ const Header: React.FC<HeaderProps> = ({ className, showBreadcrumb = true }) => 
             {/* Left side - Title and Channel Info */}
             <div className={cn(flex.start, 'space-x-4')}>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">ToovyDrop</h1>
+                <h1 className="text-2xl font-bold text-gray-900">ChannelDrop</h1>
                 <p className="text-sm text-gray-600">Secure File Management Platform</p>
               </div>
 

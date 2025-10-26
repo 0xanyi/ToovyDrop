@@ -1,4 +1,4 @@
-# ToovyDrop
+# ChannelDrop
 
 Web-based file transfer platform with channel-based organization and role-based access control.
 
@@ -320,7 +320,7 @@ Default admin credentials (after running create-admin):
 
 ---
 
-**This document serves as the complete development guide for all agents working on the ToovyDrop project. All guidelines are mandatory unless explicitly marked as optional.**
+**This document serves as the complete development guide for all agents working on the ChannelDrop project. All guidelines are mandatory unless explicitly marked as optional.**
 
 **Last Updated**: October 2024 - Phase IV Complete
 **Next Milestone**: Phase V - Admin Interface Development
