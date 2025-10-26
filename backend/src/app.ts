@@ -20,6 +20,7 @@ import performanceRoutes from './routes/performance';
 import securityRoutes from './routes/security';
 import guestLinkRoutes from './routes/guestLinks';
 import settingsRoutes from './routes/settings';
+import debugRoutes from './routes/debug';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -106,6 +107,9 @@ app.use('/api/security', securityRoutes);
 
 // Public settings routes (login background, etc.) - before CSRF protection
 app.use('/api/settings', settingsRoutes);
+
+// Debug routes (remove in production)
+app.use('/api/debug', debugRoutes);
 
 // Public guest upload routes (before CSRF protection)
 app.use('/api/guest-links', uploadRateLimit, guestLinkRoutes);
