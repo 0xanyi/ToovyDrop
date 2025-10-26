@@ -44,8 +44,22 @@ export const redis = createClient({
 // Create Express app
 export const app = express();
 
+const originCandidates = [
+  process.env.CORS_ALLOWED_ORIGINS,
+  process.env.CORS_ORIGIN,
+  process.env.CORS_ADDITIONAL_ALLOWED_ORIGINS,
+  process.env.FRONTEND_URL,
+  process.env.FRONTEND_URLS,
+].filter((value): value is string => {
+  if (typeof value !== 'string') {
+    return false;
+  }
+
+  return value.trim().length > 0;
+});
+
 const allowedOrigins = parseAllowedOrigins(
-  process.env.CORS_ALLOWED_ORIGINS || process.env.CORS_ORIGIN,
+  originCandidates.length > 0 ? originCandidates : undefined,
 );
 const allowAllOrigins = allowedOrigins.includes('*');
 const connectSrcDirectives = buildConnectSrcDirectives(

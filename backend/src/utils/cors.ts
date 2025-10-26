@@ -1,58 +1,52 @@
+type RawOriginsInput = string | string[] | undefined;
+
+function addOrigins(target: Set<string>, raw: string | undefined): void {
+  if (typeof raw !== 'string' || raw.length === 0) {
+    return;
+  }
+
+  const entries = raw.split(',');
+  for (let index = 0; index < entries.length; index += 1) {
+    const segment = entries[index].trim();
+    if (!segment) {
+      continue;
+    }
+
+    if (segment === '*') {
+      target.add('*');
+      continue;
+    }
+
+    let withoutTrailingSlash = segment;
+    while (withoutTrailingSlash.endsWith('/')) {
+      withoutTrailingSlash = withoutTrailingSlash.slice(0, -1);
+    }
+
+    target.add(withoutTrailingSlash.toLowerCase());
+  }
+}
+
 export function parseAllowedOrigins(
-  raw: string | undefined,
+  raw: RawOriginsInput,
   defaultOrigins: string[] = ['http://localhost:5173'],
 ): string[] {
   const normalized = new Set<string>();
 
-  if (typeof raw === 'string' && raw.length > 0) {
-    const entries = raw.split(',');
-    for (let index = 0; index < entries.length; index += 1) {
-      const candidate = entries[index].trim();
-      if (!candidate) {
-        continue;
-      }
-
-      if (candidate === '*') {
-        normalized.add('*');
-        continue;
-      }
-
-      let withoutTrailingSlash = candidate;
-      while (withoutTrailingSlash.endsWith('/')) {
-        withoutTrailingSlash = withoutTrailingSlash.slice(0, -1);
-      }
-
-      normalized.add(withoutTrailingSlash.toLowerCase());
+  if (Array.isArray(raw)) {
+    for (let index = 0; index < raw.length; index += 1) {
+      addOrigins(normalized, raw[index]);
     }
+  } else {
+    addOrigins(normalized, raw);
   }
 
   if (normalized.size === 0) {
     for (let index = 0; index < defaultOrigins.length; index += 1) {
-      const candidate = defaultOrigins[index].trim();
-      if (!candidate) {
-        continue;
-      }
-
-      if (candidate === '*') {
-        normalized.add('*');
-        continue;
-      }
-
-      let withoutTrailingSlash = candidate;
-      while (withoutTrailingSlash.endsWith('/')) {
-        withoutTrailingSlash = withoutTrailingSlash.slice(0, -1);
-      }
-
-      normalized.add(withoutTrailingSlash.toLowerCase());
+      addOrigins(normalized, defaultOrigins[index]);
     }
   }
 
-  const result: string[] = [];
-  for (const value of normalized) {
-    result.push(value);
-  }
-
-  return result;
+  return Array.from(normalized);
 }
 
 export function isOriginAllowed(

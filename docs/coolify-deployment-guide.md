@@ -144,14 +144,16 @@ MAX_FILE_SIZE=5368709120
 CHUNK_SIZE=5242880
 ENABLE_MALWARE_SCAN=true
 CORS_ALLOWED_ORIGINS=https://yourdomain.com
+CORS_ADDITIONAL_ALLOWED_ORIGINS=
 CSP_ADDITIONAL_CONNECT_SRC=https://api.yourdomain.com,wss://api.yourdomain.com
 LOG_LEVEL=info
 LOG_FILE=/app/logs/app.log
 ```
 
-> **Tip:** For multiple frontend domains (e.g., admin portals), provide a
-> comma-separated list in `CORS_ALLOWED_ORIGINS` and mirror the API/WebSocket
-> endpoints in `CSP_ADDITIONAL_CONNECT_SRC`.
+> **Tip:** For multiple frontend domains (e.g., admin portals), include them either in
+> `CORS_ALLOWED_ORIGINS` or `CORS_ADDITIONAL_ALLOWED_ORIGINS`. The value defined in
+> `FRONTEND_URL` is automatically whitelisted, but you still need to mirror the
+> API/WebSocket endpoints in `CSP_ADDITIONAL_CONNECT_SRC`.
 
 ### 4.4 Backend Domain Configuration
 1. Go to **"Domains"** tab in backend application

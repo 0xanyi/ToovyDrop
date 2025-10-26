@@ -20,6 +20,19 @@ describe('cors utils', () => {
     expect(origins).toEqual(['http://localhost:5173']);
   });
 
+  it('merges multiple raw values when provided as an array', () => {
+    const origins = parseAllowedOrigins([
+      'https://drop.toovy.tech/',
+      ' https://drop.lweurope.org ,https://EXAMPLE.com/',
+    ]);
+
+    expect(origins).toEqual([
+      'https://drop.toovy.tech',
+      'https://drop.lweurope.org',
+      'https://example.com',
+    ]);
+  });
+
   it('allows listed origins and rejects others', () => {
     const origins = parseAllowedOrigins('https://drop.toovy.tech, http://localhost:5173');
 
