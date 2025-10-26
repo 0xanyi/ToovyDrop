@@ -365,14 +365,64 @@ const GuestFileUpload: React.FC<GuestFileUploadProps> = ({
 
       {/* Upload Result */}
       {uploadState.result && (
-        <div className="text-center space-y-4">
+        <div className="text-center space-y-6">
           {uploadState.result.success ? (
             <>
-              <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto" />
-              <h3 className="text-lg font-medium text-gray-900">Upload Successful!</h3>
-              <p className="text-gray-600">
-                Your file "{uploadState.result.fileName}" has been uploaded successfully.
-              </p>
+              {/* Enhanced Success Section */}
+              <div className="space-y-4">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-green-100 rounded-full animate-ping opacity-25"></div>
+                  <CheckCircle2 className="relative h-16 w-16 text-green-500 mx-auto" />
+                </div>
+                
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-bold text-green-700">
+                    🎉 Upload Successful!
+                  </h3>
+                  <p className="text-lg text-gray-700">
+                    Your file has been uploaded successfully
+                  </p>
+                </div>
+              </div>
+
+              {/* Upload Details */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-center space-x-2 text-green-800">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="font-medium">Upload Details</span>
+                </div>
+                
+                <div className="text-sm space-y-2 text-green-700">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">File:</span>
+                    <span className="truncate max-w-xs" title={uploadState.result.fileName}>
+                      {uploadState.result.fileName}
+                    </span>
+                  </div>
+                  
+                  {uploadState.file && (
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">Size:</span>
+                      <span>{guestUploadService.formatFileSize(uploadState.file.size)}</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">Uploaded:</span>
+                    <span>{new Date().toLocaleTimeString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Clear Next Steps */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-blue-800 font-medium mb-3">
+                  What would you like to do next?
+                </p>
+                <p className="text-blue-700 text-sm">
+                  Your file is now available to the channel team. You can upload additional files or complete your submission.
+                </p>
+              </div>
             </>
           ) : (
             <>
@@ -397,24 +447,37 @@ const GuestFileUpload: React.FC<GuestFileUploadProps> = ({
             </>
           )}
           
-          <div className="flex justify-center space-x-3">
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4">
             {!uploadState.result.success && uploadState.result.retryable && retryCount < maxRetries && (
               <Button
                 onClick={handleRetry}
                 variant="outline"
                 disabled={uploadState.isUploading}
+                className="flex items-center"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Retry Upload
+                Retry Upload ({maxRetries - retryCount} left)
               </Button>
             )}
             
             <Button
               onClick={handleReset}
               variant={uploadState.result.success ? "primary" : "outline"}
+              className={uploadState.result.success ? "bg-green-600 hover:bg-green-700" : ""}
             >
               {uploadState.result.success ? 'Upload Another File' : 'Try Different File'}
             </Button>
+            
+            {uploadState.result.success && (
+              <Button
+                onClick={() => window.location.reload()}
+                variant="outline"
+                className="text-gray-600 border-gray-300 hover:bg-gray-50"
+              >
+                Close
+              </Button>
+            )}
           </div>
         </div>
       )}
