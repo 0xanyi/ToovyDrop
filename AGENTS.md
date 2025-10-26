@@ -36,6 +36,16 @@ Web-based file transfer platform with channel-based organization and role-based 
 - `services/uploadService.ts` → Upload management with WebSocket integration
 - `services/fileService.ts` → File operations, search, and utilities
 
+### Frontend Guest Upload Components (Phase VI)
+- `GuestFileUpload.tsx` → Guest file upload interface with link validation
+- `GuestUploadPage.tsx` → Dedicated guest upload page with progress tracking
+- `admin/GuestLinkModal.tsx` → Admin interface for creating guest upload links
+- `admin/GuestLinkList.tsx` → Admin list and management of guest links
+- `admin/GuestLinkCleanup.tsx` → Admin cleanup and maintenance interface
+
+### Frontend Guest Upload Services (Phase VI)
+- `services/guestUploadService.ts` → Guest upload API service with validation
+
 ### Frontend Admin Components (Phase V)
 - `admin/AdminDashboard.tsx` → Main admin dashboard with overview and navigation
 - `admin/UserList.tsx` → User management interface with CRUD operations
@@ -102,15 +112,28 @@ Web-based file transfer platform with channel-based organization and role-based 
 - ✅ Admin authentication, authorization, and secure access controls throughout
 - ✅ Activity monitoring and audit logging capabilities
 
-### Phase VI: Performance & Security Optimization ✅ COMPLETED
+### Phase VI: Guest Link Generation & File Management Enhancement ✅ COMPLETED
+- ✅ **Comprehensive Guest Link System**: Secure, configurable upload links with expiration and upload limits
+- ✅ **Guest File Upload Interface**: Dedicated upload page for guests with validation and progress tracking
+- ✅ **File Rename Functionality**: Users can rename files through modal interface with server-side validation
+- ✅ **Enhanced File Display**: Removed ID prefixes, added filename truncation with tooltips
+- ✅ **Guest Link Management**: Admin interface for creating, managing, and monitoring guest upload links
+- ✅ **Background Cleanup**: Automated cleanup of expired guest links and orphaned files
+- ✅ **Token Security**: Secure token generation and validation for guest access
+- ✅ **Admin Analytics**: Enhanced analytics dashboard with guest link tracking and statistics
+- ✅ **Guest Upload Tracking**: Fixed guest upload counting and analytics display
+
+### Phase VII: Performance & Security Optimization ✅ COMPLETED
 - ✅ **Database Performance**: Comprehensive indexing strategy for 40-60% query improvement
 - ✅ **Frontend Optimization**: React.memo implementation and virtual scrolling for large file lists
 - ✅ **Caching Layer**: Redis caching for user channels, system stats, and file listings (30-40% load reduction)
 - ✅ **Upload Performance**: Concurrent chunk processing with queue management (3 chunk limit)
-- ✅ **Security Hardening**: Comprehensive rate limiting across all API endpoints
+- ✅ **Security Hardening**: Comprehensive rate limiting across all API endpoints (6 different rate limiters)
 - ✅ **Performance Monitoring**: Real-time metrics collection and performance API endpoints
 - ✅ **Memory Optimization**: Component memoization reducing memory usage by 30%
 - ✅ **Enhanced UI**: Animated progress bars with speed indicators and time estimates
+- ✅ **Admin Channel Access**: Admins automatically see all active channels without explicit assignment
+- ✅ **Cache Invalidation**: User channel assignments properly invalidate cache and reflect on refresh
 
 ## Development Patterns & Constraints
 
@@ -221,6 +244,7 @@ Default admin credentials (after running create-admin):
 - `GET /api/files/search` - Search files in channel
 - `GET /api/files/:fileId/preview` - Generate file preview
 - `GET /api/files/:fileId/download` - Download file
+- `PATCH /api/files/:fileId/rename` - Rename file
 - `DELETE /api/files/:fileId` - Delete file
 - `POST /api/files/bulk-delete` - Delete multiple files
 - `PUT /api/files/:fileId/metadata` - Update file metadata
@@ -229,7 +253,11 @@ Default admin credentials (after running create-admin):
 - `POST /api/uploads/initiate` - Initiate upload session
 - `DELETE /api/uploads/:uploadId` - Cancel upload session
 
-### Performance Monitoring (Phase VI)
+### Guest Link Management (Phase VI)
+- `GET /api/guest-links/:token/validate` - Validate guest upload link
+- `POST /api/guest-links/:token/upload` - Upload file via guest link
+
+### Performance Monitoring (Phase VII)
 - `GET /api/performance/metrics` - Get current performance metrics and historical data
 - `GET /api/performance/health` - Get system health status
 - `GET /api/performance/database` - Get database performance statistics
@@ -322,7 +350,7 @@ Default admin credentials (after running create-admin):
 - [x] Performance API endpoints for admin dashboard integration
 - [x] Health checks and alerting system
 
-## Next Phase: Phase VII - Production Deployment & Monitoring 🚧 NEXT
+## Next Phase: Phase VIII - Production Deployment & Monitoring 🚧 NEXT
 
 ### Planned Features (Weeks 13-14)
 - **Production Deployment**: SSL/TLS configuration, container orchestration
@@ -375,8 +403,8 @@ Default admin credentials (after running create-admin):
 
 **This document serves as the complete development guide for all agents working on the ToovyDrop project. All guidelines are mandatory unless explicitly marked as optional.**
 
-**Last Updated**: October 10 2025 - Admin Channel Access & Cache Invalidation Fixes
-**Next Milestone**: Phase VII - Production Deployment & Monitoring
+**Last Updated**: October 26 2025 - Guest Link Generation & File Management Enhancement Complete
+**Next Milestone**: Phase VIII - Production Deployment & Monitoring
 
 ## Recent Bug Fixes (October 10, 2025)
 

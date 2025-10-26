@@ -186,6 +186,7 @@ toovydrop/
 - `GET /api/files` - List files in channel (paginated)
 - `GET /api/files/search` - Search files in channel
 - `GET /api/files/:fileId/download` - Download file
+- `PATCH /api/files/:fileId/rename` - Rename file
 - `DELETE /api/files/:fileId` - Delete file
 
 ### Channel Management
@@ -203,7 +204,7 @@ toovydrop/
 - `PUT /api/users/:id` - Update user
 - `DELETE /api/users/:id` - Delete user (admin only)
 
-### Performance Monitoring (Phase VI)
+### Performance Monitoring (Phase VII)
 
 - `GET /api/performance/metrics` - Get current performance metrics and historical data
 - `GET /api/performance/health` - Get system health status
@@ -227,6 +228,11 @@ toovydrop/
 - `GET /api/admin/files/:id` - Get file details for admin
 - `POST /api/admin/files/bulk-operation` - Perform bulk file operations
 - `GET /api/admin/files/storage-stats` - Get system storage statistics
+
+### Guest Link Management (Phase VI)
+
+- `GET /api/guest-links/:token/validate` - Validate guest upload link
+- `POST /api/guest-links/:token/upload` - Upload file via guest link
 
 For detailed API documentation, run the backend server and visit `/api/docs` (when available).
 
@@ -377,14 +383,37 @@ The application now includes comprehensive performance monitoring:
 - **Memory Optimization**: Component memoization reducing memory usage by 30%
 - **Enhanced UI**: Animated progress bars with speed indicators and time estimates
 
+### ✅ Phase 6: Guest Link Generation & File Management Enhancement (October 2025)
+
+- **Comprehensive Guest Link System**: Secure, configurable upload links with expiration and upload limits
+- **Guest File Upload Interface**: Dedicated upload page for guests with validation and progress tracking
+- **File Rename Functionality**: Users can rename files through modal interface with server-side validation
+- **Enhanced File Display**: Removed ID prefixes, added filename truncation with tooltips
+- **Guest Link Management**: Admin interface for creating, managing, and monitoring guest upload links
+- **Background Cleanup**: Automated cleanup of expired guest links and orphaned files
+- **Token Security**: Secure token generation and validation for guest access
+- **Admin Analytics**: Enhanced analytics dashboard with guest link tracking and statistics
+
 ### ✅ Bug Fixes: Admin Access & State Persistence (October 10, 2025)
 
 - **Admin Channel Access**: Admins now automatically see all active channels without explicit assignment
 - **Cache Invalidation**: User channel assignments properly invalidate cache and reflect on refresh
 - **State Persistence**: Fixed issue where channel assignments weren't persisting after page navigation
 - **Upload Permissions**: Admins can now upload to any channel by default
+- **Guest Upload Tracking**: Fixed guest upload counting and analytics display
 
-### 🚧 Next Phase: Phase 7 - Production Deployment & Monitoring
+### ✅ Phase 7: Performance & Security Optimization (Completed)
+
+- **Database Performance**: Comprehensive indexing strategy achieving 40-60% query improvement
+- **Frontend Optimization**: React.memo implementation and virtual scrolling for large file lists
+- **Caching Layer**: Redis caching for user channels, system stats, and file listings (30-40% load reduction)
+- **Upload Performance**: Concurrent chunk processing with queue management (3 chunk concurrency limit)
+- **Security Hardening**: Comprehensive rate limiting across all API endpoints (6 different rate limiters)
+- **Performance Monitoring**: Real-time metrics collection and performance API endpoints
+- **Memory Optimization**: Component memoization reducing memory usage by 30%
+- **Enhanced UI**: Animated progress bars with speed indicators and time estimates
+
+### 🚧 Next Phase: Phase 8 - Production Deployment & Monitoring
 
 - **Production Deployment**: SSL/TLS configuration, container orchestration
 - **Advanced Monitoring**: Application performance monitoring (APM), log aggregation
