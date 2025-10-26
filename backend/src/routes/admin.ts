@@ -10,7 +10,9 @@ import {
   bulkFileOperation,
   getStorageStats,
   getSystemConfig,
-  updateSystemConfig
+  updateSystemConfig,
+  getGuestLinkCleanupStats,
+  triggerGuestLinkCleanup
 } from '../controllers/adminController';
 import {
   getUsers,
@@ -22,6 +24,12 @@ import {
   getUserChannels,
   updateUserChannels
 } from '../controllers/userController';
+import {
+  createGuestLink,
+  getChannelGuestLinks,
+  updateGuestLink,
+  deleteGuestLink
+} from '../controllers/guestLinkController';
 
 const router = Router();
 
@@ -145,5 +153,45 @@ router.post('/files/bulk-operation', bulkFileOperation);
  * Get file by ID for admin
  */
 router.get('/files/:id', getAdminFileById);
+
+// Guest Link Management Routes
+
+/**
+ * POST /api/admin/channels/:channelId/guest-links
+ * Create a new guest upload link for a channel
+ */
+router.post('/channels/:channelId/guest-links', createGuestLink);
+
+/**
+ * GET /api/admin/channels/:channelId/guest-links
+ * Get all guest links for a channel
+ */
+router.get('/channels/:channelId/guest-links', getChannelGuestLinks);
+
+/**
+ * PUT /api/admin/guest-links/:linkId
+ * Update a guest link
+ */
+router.put('/guest-links/:linkId', updateGuestLink);
+
+/**
+ * DELETE /api/admin/guest-links/:linkId
+ * Delete a guest link
+ */
+router.delete('/guest-links/:linkId', deleteGuestLink);
+
+// Guest Link Cleanup Routes
+
+/**
+ * GET /api/admin/guest-links/cleanup/stats
+ * Get guest link cleanup statistics
+ */
+router.get('/guest-links/cleanup/stats', getGuestLinkCleanupStats);
+
+/**
+ * POST /api/admin/guest-links/cleanup/trigger
+ * Manually trigger guest link cleanup
+ */
+router.post('/guest-links/cleanup/trigger', triggerGuestLinkCleanup);
 
 export default router;

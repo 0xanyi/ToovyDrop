@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-import { ApiResponse } from '../types';
+import { ApiResponse, GuestUploadLink } from '../types';
 import { adminService } from '../services/adminService';
 import Layout from '../components/Layout';
 import Button from '../components/Button';
@@ -10,6 +10,8 @@ import UserChannelAssignment from '../components/admin/UserChannelAssignment';
 import ChannelList from '../components/admin/ChannelList';
 import ChannelForm from '../components/admin/ChannelForm';
 import ChannelUserAssignment from '../components/admin/ChannelUserAssignment';
+import GuestLinkModal from '../components/admin/GuestLinkModal';
+import GuestLinkList from '../components/admin/GuestLinkList';
 import AnalyticsDashboard from '../components/admin/AnalyticsDashboard';
 import FileAdministration from '../components/admin/FileAdministration';
 import SystemConfiguration from '../components/admin/SystemConfiguration';
@@ -22,7 +24,8 @@ import {
   Shield,
   Database,
   Clock,
-  Settings
+  Settings,
+  Link
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -89,6 +92,11 @@ const AdminDashboard: React.FC = () => {
   const [isChannelFormOpen, setIsChannelFormOpen] = useState(false);
   const [isChannelUserAssignmentOpen, setIsChannelUserAssignmentOpen] = useState(false);
   const [channelRefreshTrigger, setChannelRefreshTrigger] = useState(0);
+
+  // Guest link management state
+  const [isGuestLinkModalOpen, setIsGuestLinkModalOpen] = useState(false);
+  const [editingGuestLink, setEditingGuestLink] = useState<GuestUploadLink | null>(null);
+  const [guestLinkRefreshTrigger, setGuestLinkRefreshTrigger] = useState(0);
 
   useEffect(() => {
     fetchDashboardData();
@@ -246,6 +254,52 @@ const AdminDashboard: React.FC = () => {
 
   const handleChannelUserAssignmentClose = () => {
     setIsChannelUserAssignmentOpen(false);
+  };
+
+  // Guest link management handlers
+  const handleCreateGuestLink = () => {
+    if (selectedChannel) {
+      setEditingGuestLink(null);
+      setIsGuestLinkModalOpen(true);
+    }
+  };
+
+  const handleEditGuestLink = (link: GuestUploadLink) => {
+    setEditingGuestLink(link);
+    setIsGuestLinkModalOpen(true);
+  };
+
+  const handleGuestLinkModalClose = () => {
+    setIsGuestLinkModalOpen(false);
+    setEditingGuestLink(null);
+  };
+
+  const handleGuestLinkSuccess = () => {
+    setGuestLinkRefreshTrigger(prev => prev + 1);
+    // Refresh channel details to update guest link count
+    if (selectedChannel) {
+      adminService.getChannel(selectedChannel.id).then(response => {
+        if (response.success && response.data) {
+          setSelectedChannel(response.data);
+        }
+      });
+    }
+  };
+
+  const handleGuestLinkDelete = () => {
+    setGuestLinkRefreshTrigger(prev => prev + 1);
+    // Refresh channel details to update guest link count
+    if (selectedChannel) {
+      adminService.getChannel(selectedChannel.id).then(response => {
+        if (response.success && response.data) {
+          setSelectedChannel(response.data);
+        }
+      });
+    }
+  };
+
+  const handleGuestLinkToggleActive = () => {
+    setGuestLinkRefreshTrigger(prev => prev + 1);
   };
 
   const formatBytes = (bytes: bigint): string => {
@@ -517,6 +571,13 @@ const AdminDashboard: React.FC = () => {
                     <div className="flex space-x-2">
                       <Button
                         variant="secondary"
+                        onClick={handleCreateGuestLink}
+                      >
+                        <Link className="w-4 h-4 mr-2" />
+                        Generate Guest Link
+                      </Button>
+                      <Button
+                        variant="secondary"
                         onClick={handleChannelUserAssignment}
                       >
                         <Users className="w-4 h-4 mr-2" />
@@ -584,6 +645,17 @@ const AdminDashboard: React.FC = () => {
                       <p className="mt-1 text-sm text-gray-900">{new Date(selectedChannel.updatedAt).toLocaleDateString()}</p>
                     </div>
                   </div>
+
+                  {/* Guest Link Management */}
+                  <div className="mt-6 pt-6 border-t border-gray-200">
+                    <GuestLinkList
+                      channelId={selectedChannel.id}
+                      refreshTrigger={guestLinkRefreshTrigger}
+                      onEdit={handleEditGuestLink}
+                      onDelete={handleGuestLinkDelete}
+                      onToggleActive={handleGuestLinkToggleActive}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -646,6 +718,18 @@ const AdminDashboard: React.FC = () => {
           isOpen={isChannelUserAssignmentOpen}
           onClose={handleChannelUserAssignmentClose}
           onSave={handleChannelUserAssignmentSave}
+        />
+      )}
+
+      {/* Guest Link Modal */}
+      {selectedChannel && (
+        <GuestLinkModal
+          isOpen={isGuestLinkModalOpen}
+          channelId={selectedChannel.id}
+          channelName={selectedChannel.name}
+          editLink={editingGuestLink}
+          onClose={handleGuestLinkModalClose}
+          onSuccess={handleGuestLinkSuccess}
         />
       )}
     </Layout>

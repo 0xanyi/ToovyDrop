@@ -323,7 +323,7 @@ const AnalyticsDashboard: React.FC = () => {
       </div>
 
       {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <StatCard
           title="Total Users"
           value={data.overview.totalUsers.toLocaleString()}
@@ -348,6 +348,14 @@ const AnalyticsDashboard: React.FC = () => {
           icon={<HardDrive className="w-6 h-6" />}
           color="yellow"
         />
+        {data.overview.guestLinksActive !== undefined && (
+          <StatCard
+            title="Guest Links"
+            value={`${data.overview.guestLinksActive} active`}
+            icon={<Activity className="w-6 h-6" />}
+            color="blue"
+          />
+        )}
       </div>
 
       {/* Storage Usage */}
@@ -384,14 +392,34 @@ const AnalyticsDashboard: React.FC = () => {
           {/* Usage by Channel */}
           <div>
             <h4 className="text-sm font-medium text-gray-700 mb-4">By Channel</h4>
-            {renderSimpleBarChart(
-              data.storageUsage.usageByChannel.map(item => ({
-                name: item.channelName,
-                value: item.size,
-                percentage: item.percentage
-              })),
-              Math.max(...data.storageUsage.usageByChannel.map(item => item.size))
-            )}
+            <div className="space-y-3">
+              {data.storageUsage.usageByChannel.slice(0, 10).map((item, index) => (
+                <div key={index} className="flex items-center space-x-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-sm font-medium text-gray-900 truncate">{item.channelName}</p>
+                      <div className="text-right">
+                        <p className="text-sm text-gray-500">
+                          {formatBytes(item.size)}
+                          <span className="ml-2 text-gray-400">({item.percentage.toFixed(1)}%)</span>
+                        </p>
+                        {item.guestUploads > 0 && (
+                          <p className="text-xs text-blue-600">
+                            {item.guestUploads} guest • {formatBytes(item.guestSize)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min((item.size / Math.max(...data.storageUsage.usageByChannel.map(ch => ch.size))) * 100, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </ChartComponent>
@@ -457,7 +485,15 @@ const AnalyticsDashboard: React.FC = () => {
                     <p className="text-sm font-medium text-gray-900 truncate">{channel.name}</p>
                     <p className="text-xs text-gray-500">
                       {channel.fileCount} files • {formatBytes(channel.totalSize)} • {channel.userCount} users
+                      {channel.guestLinkCount > 0 && (
+                        <span className="ml-2 text-blue-600">• {channel.guestLinkCount} guest links</span>
+                      )}
                     </p>
+                    {channel.guestFileCount > 0 && (
+                      <p className="text-xs text-blue-600">
+                        {channel.guestFileCount} guest uploads • {formatBytes(channel.guestStorageSize)}
+                      </p>
+                    )}
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-gray-500">
@@ -483,6 +519,85 @@ const AnalyticsDashboard: React.FC = () => {
           </div>
         </div>
       </ChartComponent>
+
+      {/* Guest Link Activity */}
+      {data.guestLinkActivity && (
+        <ChartComponent
+          title="Guest Link Activity"
+          subtitle="Guest upload links usage and statistics"
+          icon={<Activity className="w-5 h-5" />}
+        >
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Guest Link Overview */}
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium text-gray-700 mb-4">Overview</h4>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                  <span className="text-sm font-medium text-gray-700">Active Links</span>
+                  <span className="text-lg font-bold text-blue-600">{data.guestLinkActivity.totalActiveLinks}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                  <span className="text-sm font-medium text-gray-700">Guest Uploads</span>
+                  <span className="text-lg font-bold text-green-600">{data.guestLinkActivity.totalGuestUploads}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
+                  <span className="text-sm font-medium text-gray-700">Guest Storage</span>
+                  <span className="text-lg font-bold text-purple-600">{formatBytes(data.guestLinkActivity.totalGuestStorage)}</span>
+                </div>
+                {data.guestLinkActivity.expiringLinks > 0 && (
+                  <div className="flex justify-between items-center p-3 bg-yellow-50 rounded-lg">
+                    <span className="text-sm font-medium text-gray-700">Expiring Soon</span>
+                    <span className="text-lg font-bold text-yellow-600">{data.guestLinkActivity.expiringLinks}</span>
+                  </div>
+                )}
+                {data.guestLinkActivity.limitReachedLinks > 0 && (
+                  <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                    <span className="text-sm font-medium text-gray-700">Limit Reached</span>
+                    <span className="text-lg font-bold text-red-600">{data.guestLinkActivity.limitReachedLinks}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Top Guest Links */}
+            <div className="lg:col-span-2">
+              <h4 className="text-sm font-medium text-gray-700 mb-4">Most Active Guest Links</h4>
+              <div className="space-y-3">
+                {data.guestLinkActivity.topGuestLinks.slice(0, 5).map((link) => (
+                  <div key={link.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {link.description}
+                        {link.isExpired && (
+                          <span className="ml-2 px-2 py-1 text-xs bg-red-100 text-red-800 rounded">Expired</span>
+                        )}
+                        {link.isLimitReached && (
+                          <span className="ml-2 px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded">Limit Reached</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {link.channelName} • {link.uploadCount} uploads
+                        {link.maxUploads && ` of ${link.maxUploads}`}
+                        • {formatBytes(link.storageUsed)}
+                      </p>
+                      {link.expiresAt && (
+                        <p className="text-xs text-gray-400">
+                          Expires {formatRelativeTime(link.expiresAt)}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500">
+                        Created {formatRelativeTime(link.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </ChartComponent>
+      )}
     </div>
   );
 };
