@@ -80,7 +80,7 @@ const LoginPage: React.FC = () => {
       
       <div className="relative w-full max-w-md">
         {/* Login Card */}
-        <div className="bg-white/80 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl p-8 space-y-8">
+        <div className="bg-white border border-gray-200 shadow-2xl rounded-2xl p-8 space-y-8">
           {/* Header */}
           <div className="text-center space-y-3">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg mb-4">
@@ -177,7 +177,7 @@ const LoginPage: React.FC = () => {
         {/* Bottom decoration */}
         <div className="mt-8 text-center">
           <p className="text-xs text-gray-400">
-            © 2024 ChannelDrop. All rights reserved.
+            © 2025 ChannelDrop. All rights reserved.
           </p>
         </div>
       </div>

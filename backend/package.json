@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "nodemon src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "npm run prisma:push && node dist/server.js",
+    "start:dev": "npm run prisma:push && npm run dev",
+    "prod:start": "npm run build && npm run start",
     "test": "jest",
     "test:coverage": "jest --coverage",
     "lint": "eslint src/**/*.ts",
@@ -14,6 +16,7 @@
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "create-admin": "ts-node src/scripts/createAdmin.ts",
     "cleanup:orphaned-files": "ts-node src/scripts/cleanupOrphanedFiles.ts",
