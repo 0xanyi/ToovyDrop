@@ -34,7 +34,7 @@ const getUploadService = () => {
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit per chunk
+    fileSize: parseInt(process.env.CHUNK_SIZE || '5242880', 10), // Use env chunk size, default 5MB
   },
 });
 
@@ -859,10 +859,12 @@ export const getFileContentChunk = async (req: AuthenticatedRequest, res: Respon
       });
     }
 
-    if (isNaN(chunkSz) || chunkSz <= 0 || chunkSz > 10 * 1024 * 1024) {
+    const maxChunkSize = parseInt(process.env.CHUNK_SIZE || '5242880', 10);
+    if (isNaN(chunkSz) || chunkSz <= 0 || chunkSz > maxChunkSize) {
+      const maxChunkMB = Math.round(maxChunkSize / (1024 * 1024));
       return res.status(400).json({
         success: false,
-        error: 'Invalid chunk size (max 10MB)',
+        error: `Invalid chunk size (max ${maxChunkMB}MB)`,
       });
     }
 

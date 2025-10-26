@@ -16,7 +16,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "create-admin": "ts-node src/scripts/createAdmin.ts",
-    "cleanup:orphaned-files": "ts-node src/scripts/cleanupOrphanedFiles.ts"
+    "cleanup:orphaned-files": "ts-node src/scripts/cleanupOrphanedFiles.ts",
+    "cleanup:guest-links": "ts-node src/scripts/cleanupGuestLinks.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.17.0",

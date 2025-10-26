@@ -29,6 +29,8 @@ export interface FileUploadOptions {
   channelId: string;
   uploadedBy: string;
   tempFilePath: string;
+  isGuestUpload?: boolean;
+  guestUploadLinkId?: string;
 }
 
 export class FileService {
@@ -45,6 +47,120 @@ export class FileService {
    */
   get ftpClientInstance(): ftp.Client {
     return this.ftpClient;
+  }
+
+  /**
+   * Determines the FTP path for file upload, handling guest folder organization
+   */
+  private async determineFtpPath(
+    channelFtpPath: string, 
+    sanitizedFilename: string, 
+    options: FileUploadOptions
+  ): Promise<string> {
+    let ftpPath = path.posix.join(channelFtpPath, sanitizedFilename);
+    
+    // Handle guest folder if this is a guest upload
+    if (options.isGuestUpload && options.guestUploadLinkId) {
+      const guestLink = await this.prisma.guestUploadLink.findUnique({
+        where: { id: options.guestUploadLinkId },
+        select: { guestFolder: true }
+      });
+      
+      if (guestLink && guestLink.guestFolder) {
+        ftpPath = path.posix.join(channelFtpPath, guestLink.guestFolder, sanitizedFilename);
+        logger.info(`Guest upload detected, using guest folder: ${guestLink.guestFolder}`);
+      }
+    }
+    
+    return ftpPath;
+  }
+
+  /**
+   * Determines the target directory for FTP upload, handling guest folder creation
+   */
+  private async determineTargetDirectory(
+    channelFtpPath: string, 
+    options: FileUploadOptions
+  ): Promise<string> {
+    let targetDir = channelFtpPath;
+    
+    // Handle guest folder if this is a guest upload
+    if (options.isGuestUpload && options.guestUploadLinkId) {
+      const guestLink = await this.prisma.guestUploadLink.findUnique({
+        where: { id: options.guestUploadLinkId },
+        select: { guestFolder: true }
+      });
+      
+      if (guestLink && guestLink.guestFolder) {
+        targetDir = path.posix.join(channelFtpPath, guestLink.guestFolder);
+        logger.info(`Creating guest folder directory: ${targetDir}`);
+      }
+    }
+    
+    return targetDir;
+  }
+
+  /**
+   * Creates a file record in the database with proper guest upload attribution
+   */
+  private async createFileRecord(
+    uploadId: string,
+    sanitizedFilename: string,
+    ftpPath: string,
+    options: FileUploadOptions
+  ) {
+    const fileData = {
+      id: uploadId,
+      filename: sanitizedFilename,
+      originalName: options.filename,
+      mimeType: options.mimeType,
+      size: BigInt(options.size),
+      ftpPath,
+      channelId: options.channelId,
+      uploadedBy: options.isGuestUpload ? null : options.uploadedBy, // Set to null for guest uploads
+      uploadedByGuest: options.isGuestUpload || false,
+      guestUploadLinkId: options.guestUploadLinkId,
+    };
+
+    logger.info(`Creating file record with guest upload attribution:`, {
+      uploadId,
+      filename: sanitizedFilename,
+      isGuestUpload: options.isGuestUpload,
+      guestUploadLinkId: options.guestUploadLinkId,
+      channelId: options.channelId
+    });
+
+    const fileRecord = await this.prisma.file.create({
+      data: fileData,
+    });
+
+    // If this is a guest upload, increment the upload count on the guest link
+    if (options.isGuestUpload && options.guestUploadLinkId) {
+      await this.incrementGuestLinkUploadCount(options.guestUploadLinkId);
+    }
+
+    return fileRecord;
+  }
+
+  /**
+   * Increments the upload count for a guest link
+   */
+  private async incrementGuestLinkUploadCount(guestUploadLinkId: string): Promise<void> {
+    try {
+      await this.prisma.guestUploadLink.update({
+        where: { id: guestUploadLinkId },
+        data: {
+          uploadCount: {
+            increment: 1
+          }
+        }
+      });
+      
+      logger.info(`Incremented upload count for guest link: ${guestUploadLinkId}`);
+    } catch (error) {
+      logger.error(`Failed to increment upload count for guest link ${guestUploadLinkId}:`, error);
+      // Don't throw error as the file upload was successful
+    }
   }
 
   /**
@@ -124,7 +240,9 @@ export class FileService {
       throw new Error(pathValidation.error);
     }
 
-    const ftpPath = path.posix.join(channel.ftpPath, sanitizedFilename);
+    // Determine FTP path with guest folder handling
+    const ftpPath = await this.determineFtpPath(channel.ftpPath, sanitizedFilename, options);
+    
     logger.info(`Target FTP path: ${ftpPath}`);
     
     // Initialize progress tracking
@@ -145,8 +263,10 @@ export class FileService {
       logger.info('Successfully connected to FTP server');
       
       // Ensure directory exists on FTP server
-      logger.info(`Ensuring FTP directory exists: ${channel.ftpPath}`);
-      await this.ftpClient.ensureDir(channel.ftpPath);
+      const targetDir = await this.determineTargetDirectory(channel.ftpPath, options);
+      
+      logger.info(`Ensuring FTP directory exists: ${targetDir}`);
+      await this.ftpClient.ensureDir(targetDir);
       logger.info('FTP directory ensured');
       
       // Check if temp file exists
@@ -166,20 +286,8 @@ export class FileService {
       progress.status = 'processing';
       logger.info(`Successfully uploaded file to FTP: ${ftpPath}`);
       
-      // Store file metadata in database
-      const fileRecord = await this.prisma.file.create({
-        data: {
-          id: uploadId,
-          filename: sanitizedFilename,
-          originalName: options.filename,
-          mimeType: options.mimeType,
-          size: BigInt(options.size),
-          ftpPath,
-          channelId: options.channelId,
-          uploadedBy: options.uploadedBy,
-          uploadedByGuest: false,
-        },
-      });
+      // Store file metadata in database with proper guest upload attribution
+      const fileRecord = await this.createFileRecord(uploadId, sanitizedFilename, ftpPath, options);
       
       progress.status = 'completed';
       progress.progress = 100;

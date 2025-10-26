@@ -18,6 +18,7 @@ import fileRoutes from './routes/files';
 import adminRoutes from './routes/admin';
 import performanceRoutes from './routes/performance';
 import securityRoutes from './routes/security';
+import guestLinkRoutes from './routes/guestLinks';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -74,9 +75,10 @@ app.use(cors({
   credentials: true,
 }));
 
-// Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Body parsing middleware - use larger limits for file uploads
+const bodyLimit = process.env.NODE_ENV === 'production' ? '50mb' : '100mb';
+app.use(express.json({ limit: bodyLimit }));
+app.use(express.urlencoded({ extended: true, limit: bodyLimit }));
 
 // Request logging middleware
 app.use(requestLogger);
@@ -86,6 +88,9 @@ app.use('/api', generalRateLimit);
 
 // Security utility routes (e.g., CSRF token)
 app.use('/api/security', securityRoutes);
+
+// Public guest upload routes (before CSRF protection)
+app.use('/api/guest-links', uploadRateLimit, guestLinkRoutes);
 
 // Apply CSRF protection to state-changing requests
 app.use(csrfProtection);

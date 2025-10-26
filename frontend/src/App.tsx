@@ -12,6 +12,7 @@ import './utils/errorLogger';
 // Lazy load pages for code splitting
 const LoginPage = React.lazy(() => import('./pages/LoginPage'));
 const DashboardPage = React.lazy(() => import('./pages/DashboardPage'));
+const GuestUploadPage = React.lazy(() => import('./pages/GuestUploadPage'));
 
 // Admin pages
 const AdminOverviewPage = React.lazy(() => import('./pages/admin/AdminOverviewPage'));
@@ -65,6 +66,7 @@ const AppRoutes: React.FC = () => {
       <Suspense fallback={<LoadingSpinner />}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/guest-upload/:token" element={<GuestUploadPage />} />
           <Route
             path="/dashboard"
             element={

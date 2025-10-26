@@ -141,6 +141,15 @@ export class ChannelService {
                 guestUploadLinks: true,
                 userChannels: true
               }
+            },
+            guestUploadLinks: {
+              select: {
+                id: true,
+                isActive: true,
+                uploadCount: true,
+                maxUploads: true,
+                expiresAt: true
+              }
             }
           },
           skip,
@@ -153,12 +162,24 @@ export class ChannelService {
 
       console.log(`ChannelService.getAllChannels: found ${channels.length} channels, total count: ${total}`);
 
+      // Process channels to add guest link statistics
+      const channelsWithStats = channels.map(channel => {
+        const guestLinkStats = this.calculateGuestLinkStats(channel.guestUploadLinks);
+        
+        return {
+          ...channel,
+          guestLinkStats,
+          // Remove the raw guestUploadLinks array from the response
+          guestUploadLinks: undefined
+        };
+      });
+
       const totalPages = Math.ceil(total / limit);
 
       return {
         success: true,
         data: {
-          channels,
+          channels: channelsWithStats,
           pagination: {
             page,
             limit,
@@ -207,6 +228,27 @@ export class ChannelService {
               guestUploadLinks: true,
               userChannels: true
             }
+          },
+          guestUploadLinks: {
+            select: {
+              id: true,
+              token: true,
+              description: true,
+              isActive: true,
+              uploadCount: true,
+              maxUploads: true,
+              expiresAt: true,
+              guestFolder: true,
+              createdAt: true,
+              updatedAt: true,
+              creator: {
+                select: {
+                  id: true,
+                  email: true
+                }
+              }
+            },
+            orderBy: { createdAt: 'desc' }
           }
         }
       });
@@ -235,9 +277,17 @@ export class ChannelService {
         }
       }
 
+      // Add guest link statistics
+      const guestLinkStats = this.calculateGuestLinkStats(channel.guestUploadLinks);
+      
+      const channelWithStats = {
+        ...channel,
+        guestLinkStats
+      };
+
       return {
         success: true,
-        data: { channel }
+        data: { channel: channelWithStats }
       };
     } catch (error) {
       return {
@@ -662,6 +712,64 @@ export class ChannelService {
   }
 
   /**
+   * Calculate guest link statistics for a channel
+   */
+  private calculateGuestLinkStats(guestUploadLinks: any[]): {
+    total: number;
+    active: number;
+    inactive: number;
+    expired: number;
+    totalUploads: number;
+    averageUploadsPerLink: number;
+    linksNearLimit: number;
+  } {
+    const now = new Date();
+    
+    const stats = {
+      total: guestUploadLinks.length,
+      active: 0,
+      inactive: 0,
+      expired: 0,
+      totalUploads: 0,
+      averageUploadsPerLink: 0,
+      linksNearLimit: 0
+    };
+
+    guestUploadLinks.forEach(link => {
+      // Count uploads
+      stats.totalUploads += link.uploadCount || 0;
+      
+      // Check if expired
+      const isExpired = link.expiresAt && new Date(link.expiresAt) < now;
+      
+      // Check if near limit (80% of max uploads)
+      const isNearLimit = link.maxUploads && 
+        link.uploadCount >= (link.maxUploads * 0.8);
+      
+      if (isExpired) {
+        stats.expired++;
+      }
+      
+      if (link.isActive && !isExpired) {
+        stats.active++;
+      } else {
+        stats.inactive++;
+      }
+      
+      if (isNearLimit) {
+        stats.linksNearLimit++;
+      }
+    });
+
+    // Calculate average uploads per link
+    stats.averageUploadsPerLink = stats.total > 0 
+      ? Math.round((stats.totalUploads / stats.total) * 100) / 100 
+      : 0;
+
+    return stats;
+  }
+
+  /**
    * Check if user has access to a channel
    */
   private async checkChannelAccess(userId: string, channelId: string): Promise<boolean> {
@@ -689,6 +797,81 @@ export class ChannelService {
       return !!userChannel;
     } catch {
       return false;
+    }
+  }
+
+  /**
+   * Get guest link statistics for a channel
+   */
+  async getChannelGuestLinkStats(channelId: string): Promise<ApiResponse<{
+    stats: {
+      total: number;
+      active: number;
+      inactive: number;
+      expired: number;
+      totalUploads: number;
+      averageUploadsPerLink: number;
+      linksNearLimit: number;
+    };
+    recentLinks: any[];
+  }>> {
+    try {
+      const channel = await this.prisma.channel.findUnique({
+        where: { id: channelId },
+        include: {
+          guestUploadLinks: {
+            select: {
+              id: true,
+              token: true,
+              description: true,
+              isActive: true,
+              uploadCount: true,
+              maxUploads: true,
+              expiresAt: true,
+              guestFolder: true,
+              createdAt: true,
+              updatedAt: true,
+              creator: {
+                select: {
+                  id: true,
+                  email: true
+                }
+              }
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 5 // Get 5 most recent links
+          }
+        }
+      });
+
+      if (!channel) {
+        return {
+          success: false,
+          error: {
+            code: ErrorCode.NOT_FOUND,
+            message: 'Channel not found'
+          }
+        };
+      }
+
+      const stats = this.calculateGuestLinkStats(channel.guestUploadLinks);
+
+      return {
+        success: true,
+        data: {
+          stats,
+          recentLinks: channel.guestUploadLinks
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          code: ErrorCode.INTERNAL_ERROR,
+          message: 'Failed to retrieve guest link statistics',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        }
+      };
     }
   }
 

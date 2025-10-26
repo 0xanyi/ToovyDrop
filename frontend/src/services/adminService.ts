@@ -464,6 +464,126 @@ class AdminService {
 
     return response.json();
   }
+
+  /**
+   * Create guest link
+   */
+  async createGuestLink(data: {
+    channelId: string;
+    description?: string;
+    expiresAt?: string;
+    maxUploads?: number;
+    guestFolder?: string;
+  }): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/api/admin/channels/${data.channelId}/guest-links`, {
+      method: 'POST',
+      headers: await this.getAuthHeadersWithCsrf(),
+      body: JSON.stringify(data)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to create guest link: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Get channel guest links
+   */
+  async getChannelGuestLinks(channelId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/api/admin/channels/${channelId}/guest-links`, {
+      headers: this.getAuthHeaders()
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch guest links: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Update guest link
+   */
+  async updateGuestLink(linkId: string, data: {
+    description?: string;
+    expiresAt?: string;
+    maxUploads?: number;
+    guestFolder?: string;
+    isActive?: boolean;
+  }): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/api/admin/guest-links/${linkId}`, {
+      method: 'PUT',
+      headers: await this.getAuthHeadersWithCsrf(),
+      body: JSON.stringify(data)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to update guest link: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Delete guest link
+   */
+  async deleteGuestLink(linkId: string): Promise<ApiResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/api/admin/guest-links/${linkId}`, {
+      method: 'DELETE',
+      headers: await this.getAuthHeadersWithCsrf()
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to delete guest link: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Get guest link cleanup statistics
+   */
+  async getGuestLinkCleanupStats(): Promise<ApiResponse<{
+    expiredActiveLinks: number;
+    limitReachedActiveLinks: number;
+    oldInactiveLinks: number;
+    totalActiveLinks: number;
+  }>> {
+    const response = await fetch(`${API_BASE_URL}/api/admin/guest-links/cleanup/stats`, {
+      headers: this.getAuthHeaders()
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch cleanup stats: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Trigger guest link cleanup manually
+   */
+  async triggerGuestLinkCleanup(): Promise<ApiResponse<{
+    message: string;
+    result: {
+      deactivatedCount: number;
+      deletedCount: number;
+      errors: string[];
+    };
+  }>> {
+    const response = await fetch(`${API_BASE_URL}/api/admin/guest-links/cleanup/trigger`, {
+      method: 'POST',
+      headers: await this.getAuthHeadersWithCsrf()
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to trigger cleanup: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
 }
 
 export const adminService = new AdminService();

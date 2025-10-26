@@ -3,8 +3,9 @@ import { prisma } from '../app';
 import { AppError } from '../middleware/errorHandler';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { ApiResponse } from '../types';
-import { User, Channel, File } from '@prisma/client';
+import { User, Channel } from '@prisma/client';
 import auditService from '../services/auditService';
+import GuestLinkCleanupService from '../services/guestLinkCleanupService';
 
 /**
  * Get admin dashboard statistics
@@ -588,7 +589,7 @@ export const getAnalytics = async (req: AuthenticatedRequest, res: Response): Pr
         startDate.setDate(now.getDate() - 30);
     }
 
-    // Get overview statistics
+    // Get overview statistics including guest uploads
     const [
       totalUsers,
       totalChannels,
@@ -597,7 +598,9 @@ export const getAnalytics = async (req: AuthenticatedRequest, res: Response): Pr
       activeUsers,
       activeChannels,
       uploadsToday,
-      uploadsThisWeek
+      uploadsThisWeek,
+      guestLinksActive,
+      guestUploadsInPeriod
     ] = await Promise.all([
       prisma.user.count({ where: { isActive: true } }),
       prisma.channel.count({ where: { isActive: true } }),
@@ -637,7 +640,18 @@ export const getAnalytics = async (req: AuthenticatedRequest, res: Response): Pr
             gte: new Date(now.setDate(now.getDate() - 7))
           }
         }
-      })
+      }),
+      prisma.guestUploadLink.count({
+        where: { isActive: true }
+      }),
+      prisma.file.count({
+        where: {
+          isActive: true,
+          uploadedByGuest: true,
+          createdAt: { gte: startDate }
+        }
+      }),
+
     ]);
 
     // Get storage usage by file type
@@ -652,28 +666,34 @@ export const getAnalytics = async (req: AuthenticatedRequest, res: Response): Pr
       orderBy: { _sum: { size: 'desc' } }
     });
 
-    // Get storage usage by channel
+    // Get storage usage by channel with guest data
     const storageByChannel = await prisma.channel.findMany({
       where: { isActive: true },
       include: {
         _count: {
-          select: { files: true }
+          select: { 
+            files: { where: { isActive: true } },
+            guestUploadLinks: { where: { isActive: true } }
+          }
         },
         files: {
           where: { isActive: true },
-          select: { size: true }
+          select: { size: true, uploadedByGuest: true }
         }
       }
     });
 
-    // Get upload trends (daily for last 30 days)
-    const uploadTrends = await getUploadTrends(startDate, now);
+    // Get upload trends with guest data
+    const uploadTrends = await getUploadTrendsWithGuests(startDate, now);
 
     // Get user activity data
     const userActivityData = await getUserActivityData(startDate, now);
 
-    // Get channel activity data
-    const channelActivityData = await getChannelActivityData(startDate, now);
+    // Get channel activity data with guest info
+    const channelActivityData = await getChannelActivityDataWithGuests(startDate, now);
+
+    // Get guest link analytics
+    const guestLinkAnalytics = await getGuestLinkAnalytics(startDate, now);
 
     // Calculate total storage for usage calculations
     const totalStorageSize = Number(totalStorage._sum.size || BigInt(0));
@@ -688,7 +708,9 @@ export const getAnalytics = async (req: AuthenticatedRequest, res: Response): Pr
         activeUsers,
         activeChannels,
         uploadsToday,
-        uploadsThisWeek
+        uploadsThisWeek,
+        guestLinksActive,
+        guestUploadsInPeriod
       },
       storageUsage: {
         totalSize: totalStorageAllocated,
@@ -705,12 +727,18 @@ export const getAnalytics = async (req: AuthenticatedRequest, res: Response): Pr
           channelName: channel.name,
           size: channel.files.reduce((sum, file) => sum + Number(file.size), 0),
           count: channel._count.files,
+          guestUploads: channel.files.filter(f => f.uploadedByGuest).length,
+          guestSize: channel.files
+            .filter(f => f.uploadedByGuest)
+            .reduce((sum, file) => sum + Number(file.size), 0),
+          guestLinkCount: channel._count.guestUploadLinks,
           percentage: totalStorageSize > 0 ? (channel.files.reduce((sum, file) => sum + Number(file.size), 0) / totalStorageSize) * 100 : 0
         }))
       },
       uploadTrends,
       userActivity: userActivityData,
-      channelActivity: channelActivityData
+      channelActivity: channelActivityData,
+      guestLinkActivity: guestLinkAnalytics
     };
 
     const response: ApiResponse = {
@@ -728,21 +756,25 @@ export const getAnalytics = async (req: AuthenticatedRequest, res: Response): Pr
 };
 
 /**
- * Helper function to get upload trends
+ * Helper function to get upload trends with guest data
  */
-async function getUploadTrends(startDate: Date, endDate: Date) {
-  // Get daily upload counts for the last 30 days
+async function getUploadTrendsWithGuests(startDate: Date, endDate: Date) {
+  // Get daily upload counts including guest uploads
   const dailyData = await prisma.$queryRaw<Array<{
     date: Date;
     uploads: bigint;
+    guest_uploads: bigint;
     size: bigint;
+    guest_size: bigint;
     users: bigint;
   }>>`
     SELECT
       DATE(created_at) as date,
       COUNT(*) as uploads,
+      COUNT(*) FILTER (WHERE uploaded_by_guest = true) as guest_uploads,
       COALESCE(SUM(size), 0) as size,
-      COUNT(DISTINCT uploaded_by) as users
+      COALESCE(SUM(size) FILTER (WHERE uploaded_by_guest = true), 0) as guest_size,
+      COUNT(DISTINCT uploaded_by) FILTER (WHERE uploaded_by_guest = false) as users
     FROM files
     WHERE is_active = true
       AND created_at >= ${startDate}
@@ -756,7 +788,9 @@ async function getUploadTrends(startDate: Date, endDate: Date) {
     daily: dailyData.map(item => ({
       date: item.date.toISOString().split('T')[0],
       uploads: Number(item.uploads),
+      guestUploads: Number(item.guest_uploads),
       size: Number(item.size),
+      guestSize: Number(item.guest_size),
       users: Number(item.users)
     })),
     weekly: [], // Could be implemented similarly
@@ -830,9 +864,9 @@ async function getUserActivityData(startDate: Date, _endDate: Date) {
 }
 
 /**
- * Helper function to get channel activity data
+ * Helper function to get channel activity data with guest info
  */
-async function getChannelActivityData(startDate: Date, _endDate: Date) {
+async function getChannelActivityDataWithGuests(startDate: Date, _endDate: Date) {
   const [
     activeChannels,
     topChannels
@@ -851,7 +885,8 @@ async function getChannelActivityData(startDate: Date, _endDate: Date) {
       where: { isActive: true },
       include: {
         files: {
-          where: { isActive: true }
+          where: { isActive: true },
+          select: { size: true, uploadedByGuest: true }
         },
         userChannels: {
           include: {
@@ -861,15 +896,16 @@ async function getChannelActivityData(startDate: Date, _endDate: Date) {
         _count: {
           select: {
             files: true,
-            userChannels: true
+            userChannels: true,
+            guestUploadLinks: { where: { isActive: true } }
           }
         }
       },
       take: 10
     }) as unknown as Array<Channel & {
-      files: File[];
+      files: Array<{ size: bigint; uploadedByGuest: boolean }>;
       userChannels: Array<{ user: User }>;
-      _count: { files: number; userChannels: number };
+      _count: { files: number; userChannels: number; guestUploadLinks: number };
     }>
   ]);
 
@@ -912,11 +948,115 @@ async function getChannelActivityData(startDate: Date, _endDate: Date) {
       channelId: channel.id,
       name: channel.name,
       fileCount: channel._count.files,
-      totalSize: channel.files.reduce((sum: number, file: { size: bigint }) => sum + Number(file.size), 0),
+      totalSize: channel.files.reduce((sum: number, file) => sum + Number(file.size), 0),
       userCount: channel._count.userChannels,
+      guestLinkCount: channel._count.guestUploadLinks,
+      guestFileCount: channel.files.filter(f => f.uploadedByGuest).length,
+      guestStorageSize: channel.files
+        .filter(f => f.uploadedByGuest)
+        .reduce((sum: number, file) => sum + Number(file.size), 0),
       lastActivity: channel.updatedAt.toISOString()
     })),
     channelsByUsage: channelsByUsageRange
+  };
+}
+
+/**
+ * Helper function to get guest link analytics
+ */
+async function getGuestLinkAnalytics(startDate: Date, endDate: Date) {
+  const now = new Date();
+  
+  // Get guest link statistics
+  const [
+    totalActiveLinks,
+    totalGuestUploads,
+    totalGuestStorage,
+    topGuestLinks,
+    expiringLinks,
+    limitReachedLinks
+  ] = await Promise.all([
+    prisma.guestUploadLink.count({
+      where: { isActive: true }
+    }),
+    prisma.file.count({
+      where: {
+        isActive: true,
+        uploadedByGuest: true,
+        createdAt: { gte: startDate, lte: endDate }
+      }
+    }),
+    prisma.file.aggregate({
+      where: {
+        isActive: true,
+        uploadedByGuest: true,
+        createdAt: { gte: startDate, lte: endDate }
+      },
+      _sum: { size: true }
+    }),
+    prisma.guestUploadLink.findMany({
+      where: {
+        isActive: true,
+        uploadCount: { gt: 0 }
+      },
+      select: {
+        id: true,
+        description: true,
+        uploadCount: true,
+        maxUploads: true,
+        expiresAt: true,
+        createdAt: true,
+        channel: {
+          select: { name: true }
+        },
+        files: {
+          where: {
+            isActive: true,
+            createdAt: { gte: startDate, lte: endDate }
+          },
+          select: { size: true }
+        }
+      },
+      orderBy: { uploadCount: 'desc' },
+      take: 10
+    }),
+    prisma.guestUploadLink.count({
+      where: {
+        isActive: true,
+        expiresAt: {
+          lte: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) // Next 7 days
+        }
+      }
+    }),
+    prisma.guestUploadLink.count({
+      where: {
+        isActive: true,
+        AND: [
+          { maxUploads: { not: null } },
+          { uploadCount: { gte: prisma.guestUploadLink.fields.maxUploads } }
+        ]
+      }
+    })
+  ]);
+
+  return {
+    totalActiveLinks,
+    totalGuestUploads,
+    totalGuestStorage: Number(totalGuestStorage._sum.size || BigInt(0)),
+    topGuestLinks: topGuestLinks.map(link => ({
+      id: link.id,
+      description: link.description || 'Unnamed Link',
+      channelName: link.channel?.name || 'Unknown Channel',
+      uploadCount: link.uploadCount,
+      maxUploads: link.maxUploads,
+      storageUsed: link.files.reduce((sum, file) => sum + Number(file.size), 0),
+      expiresAt: link.expiresAt?.toISOString(),
+      createdAt: link.createdAt.toISOString(),
+      isExpired: link.expiresAt ? link.expiresAt < now : false,
+      isLimitReached: link.maxUploads ? link.uploadCount >= link.maxUploads : false
+    })),
+    expiringLinks,
+    limitReachedLinks
   };
 }
 /**
@@ -1029,5 +1169,66 @@ export const updateSystemConfig = async (req: AuthenticatedRequest, res: Respons
       throw error;
     }
     throw new AppError('Failed to update system configuration', 500, 'INTERNAL_ERROR');
+  }
+};
+
+/**
+ * Get guest link cleanup statistics
+ */
+export const getGuestLinkCleanupStats = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const cleanupService = new GuestLinkCleanupService(prisma);
+    const stats = await cleanupService.getCleanupStats();
+
+    const response: ApiResponse = {
+      success: true,
+      data: stats
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw new AppError('Failed to fetch cleanup statistics', 500, 'INTERNAL_ERROR');
+  }
+};
+
+/**
+ * Manually trigger guest link cleanup
+ */
+export const triggerGuestLinkCleanup = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const cleanupService = new GuestLinkCleanupService(prisma);
+    const result = await cleanupService.cleanupExpiredLinks();
+
+    // Log the manual cleanup trigger
+    await auditService.recordEvent({
+      action: 'TRIGGER_GUEST_LINK_CLEANUP',
+      entityType: 'SYSTEM',
+      entityId: 'guest_link_cleanup',
+      actorId: req.user!.id,
+      metadata: {
+        deactivatedCount: result.deactivatedCount,
+        deletedCount: result.deletedCount,
+        errorCount: result.errors.length,
+        errors: result.errors
+      }
+    });
+
+    const response: ApiResponse = {
+      success: true,
+      data: {
+        message: 'Guest link cleanup completed successfully',
+        result
+      }
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw new AppError('Failed to trigger guest link cleanup', 500, 'INTERNAL_ERROR');
   }
 };

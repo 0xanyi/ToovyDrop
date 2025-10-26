@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ApiResponse } from '../../types';
+import { ApiResponse, File as FileType } from '../../types';
 import Button from '../Button';
 import { useAuth } from '../../contexts/AuthContext';
+import FilePreviewModal from '../FilePreview';
 import {
   FileText,
   Search,
@@ -165,7 +166,7 @@ const FileAdministration: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Modal states
-  const [_previewFile, setPreviewFile] = useState<AdminFile | null>(null);
+  const [previewFile, setPreviewFile] = useState<AdminFile | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
@@ -366,6 +367,26 @@ const FileAdministration: React.FC = () => {
     return new Date(dateString).toLocaleString();
   };
 
+  // Convert AdminFile to File format for preview modal
+  const convertToFileType = (adminFile: AdminFile): FileType => {
+    return {
+      id: adminFile.id,
+      filename: adminFile.filename,
+      originalName: adminFile.originalName,
+      mimeType: adminFile.mimeType,
+      size: adminFile.size,
+      ftpPath: adminFile.ftpPath,
+      channelId: adminFile.channelId,
+      uploadedBy: adminFile.uploadedBy,
+      uploadedByGuest: adminFile.uploadedByGuest,
+      guestUploadLinkId: adminFile.guestUploadLinkId,
+      createdAt: adminFile.createdAt,
+      updatedAt: adminFile.updatedAt,
+      isActive: adminFile.isActive,
+      uploader: adminFile.uploader
+    };
+  };
+
   const getMimeTypeIcon = (mimeType?: string) => {
     if (!mimeType) return <FileText className="w-4 h-4 text-gray-400" />;
 
@@ -408,12 +429,8 @@ const FileAdministration: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">File Administration</h2>
-          <p className="text-gray-600">Manage and monitor all files in the system</p>
-        </div>
+      {/* Action Bar */}
+      <div className="flex items-center justify-end">
         <div className="flex items-center space-x-2">
           <Button variant="secondary" onClick={fetchFiles}>
             <RefreshCw className="w-4 h-4 mr-2" />
@@ -849,6 +866,13 @@ const FileAdministration: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* File Preview Modal */}
+      <FilePreviewModal
+        file={previewFile ? convertToFileType(previewFile) : null}
+        isOpen={!!previewFile}
+        onClose={() => setPreviewFile(null)}
+      />
     </div>
   );
 };

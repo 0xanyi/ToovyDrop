@@ -3,8 +3,13 @@ import { createServer } from 'http';
 import { prisma, redis } from './app';
 import { websocketService } from './services/websocketService';
 import { maintenanceService } from './services/maintenanceService';
+import GuestLinkCleanupService from './services/guestLinkCleanupService';
 
 const PORT = process.env.PORT || 3000;
+
+// Initialize cleanup service
+const guestLinkCleanupService = new GuestLinkCleanupService(prisma);
+let cleanupInterval: any;
 
 async function startServer() {
   try {
@@ -25,11 +30,16 @@ async function startServer() {
     // Start maintenance service
     maintenanceService.start();
     
+    // Start guest link cleanup service (runs every 24 hours)
+    const cleanupIntervalHours = parseInt(process.env.GUEST_LINK_CLEANUP_INTERVAL_HOURS || '24');
+    cleanupInterval = guestLinkCleanupService.startPeriodicCleanup(cleanupIntervalHours);
+    
     // Start server
     server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`WebSocket server ready`);
       console.log(`Maintenance service started`);
+      console.log(`Guest link cleanup service started (interval: ${cleanupIntervalHours}h)`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
@@ -43,6 +53,12 @@ process.on('SIGINT', async () => {
   
   websocketService.close();
   maintenanceService.stop();
+  
+  // Stop guest link cleanup service
+  if (cleanupInterval) {
+    guestLinkCleanupService.stopPeriodicCleanup(cleanupInterval);
+  }
+  
   await prisma.$disconnect();
   await redis.disconnect();
   
