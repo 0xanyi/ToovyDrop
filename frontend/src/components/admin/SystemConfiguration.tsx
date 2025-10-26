@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { adminService as _adminService } from '../../services/adminService';
 import { ApiResponse } from '../../types';
 import Button from '../Button';
+import LoginBackgroundUpload from './LoginBackgroundUpload';
 import {
   Settings as _Settings,
   Database,
@@ -407,6 +408,9 @@ const SystemConfiguration: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Login Background Upload */}
+      <LoginBackgroundUpload />
 
       {/* General Configuration */}
       <ConfigSection

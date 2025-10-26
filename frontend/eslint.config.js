@@ -57,6 +57,7 @@ export default [
         confirm: 'readonly',
         alert: 'readonly',
         KeyboardEvent: 'readonly',
+        FileReader: 'readonly',
       },
     },
     plugins: {
