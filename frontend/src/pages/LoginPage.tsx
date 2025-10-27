@@ -89,11 +89,8 @@ const LoginPage: React.FC = () => {
               </svg>
             </div>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-              Welcome back
+            ChannelDrop
             </h1>
-            <p className="text-gray-600 text-sm font-medium">
-              Sign in to ChannelDrop
-            </p>
             <p className="text-gray-500 text-xs">
               Secure file transfer and management
             </p>
