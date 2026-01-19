@@ -7,7 +7,7 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 export default [
   js.configs.recommended,
   {
-    ignores: ['dist/**', 'node_modules/**'],
+    ignores: ['dist/**', 'node_modules/**', 'public/**'],
   },
   {
     files: ['**/*.{ts,tsx}'],
@@ -24,6 +24,7 @@ export default [
         console: 'readonly',
         document: 'readonly',
         window: 'readonly',
+        self: 'readonly',
         localStorage: 'readonly',
         sessionStorage: 'readonly',
         fetch: 'readonly',
@@ -32,6 +33,8 @@ export default [
         Blob: 'readonly',
         FormData: 'readonly',
         URL: 'readonly',
+        caches: 'readonly',
+        location: 'readonly',
         URLSearchParams: 'readonly',
         Headers: 'readonly',
         HeadersInit: 'readonly',
@@ -58,6 +61,15 @@ export default [
         alert: 'readonly',
         KeyboardEvent: 'readonly',
         FileReader: 'readonly',
+        navigator: 'readonly',
+        Navigator: 'readonly',
+        HTMLElement: 'readonly',
+        HTMLImageElement: 'readonly',
+        Element: 'readonly',
+        Event: 'readonly',
+        IntersectionObserver: 'readonly',
+        React: 'readonly',
+        ResizeObserver: 'readonly',
       },
     },
     plugins: {
@@ -72,7 +84,7 @@ export default [
         'warn',
         { allowConstantExport: true },
       ],
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_|^err$' }],
       '@typescript-eslint/no-explicit-any': 'warn',
     },
     settings: {

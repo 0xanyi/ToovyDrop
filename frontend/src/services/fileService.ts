@@ -154,7 +154,7 @@ export class FileService {
       // Create blob URL for the image
       const blob = new Blob([response.data]);
       return window.URL.createObjectURL(blob);
-    } catch (error) {
+    } catch {
       throw new Error('Failed to load thumbnail');
     }
   }
@@ -168,7 +168,7 @@ export class FileService {
       // Create blob URL for the file
       const blob = new Blob([response.data]);
       return window.URL.createObjectURL(blob);
-    } catch (error) {
+    } catch {
       throw new Error('Failed to load file');
     }
   }

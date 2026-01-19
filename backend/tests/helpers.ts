@@ -5,7 +5,7 @@ import { PrismaClient } from '../src/app';
 export const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: process.env.DATABASE_URL || 'postgresql://test:test@localhost:5432/test_db',
+      url: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/test_db',
     },
   },
 });
@@ -56,6 +56,24 @@ export const createTestChannel = async (name: string) => {
 
 export const createTestUser = async (email: string, role: 'ADMIN' | 'CHANNEL_USER' = 'CHANNEL_USER', password: string = 'testpassword') => {
   const passwordHash = await bcrypt.hash(password, 10);
+  
+  // Try to find existing user first
+  const existingUser = await prisma.user.findUnique({
+    where: { email },
+  });
+  
+  if (existingUser) {
+    // Update existing user with new data if needed
+    return await prisma.user.update({
+      where: { email },
+      data: {
+        passwordHash,
+        role,
+      },
+    });
+  }
+  
+  // Create new user if doesn't exist
   return await prisma.user.create({
     data: {
       email,

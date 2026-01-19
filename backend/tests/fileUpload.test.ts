@@ -15,13 +15,11 @@ const getCsrfToken = async () => {
 
 // Test data
 const testUser = {
-  id: 'test-user-id',
   email: 'test@example.com',
   role: 'CHANNEL_USER' as const,
 };
 
 const testChannel = {
-  id: 'test-channel-id',
   name: 'Test Channel',
   slug: 'test-channel',
   ftpPath: '/test',
@@ -29,58 +27,117 @@ const testChannel = {
 };
 
 const testAdmin = {
-  id: 'test-admin-id',
   email: 'admin@example.com',
   role: 'ADMIN' as const,
 };
 
 let authToken: string;
 let adminToken: string;
+let testUserId: string;
+let testAdminId: string;
+let testChannelId: string;
 
 beforeAll(async () => {
-  // Create test user and admin in database
-  await prisma.user.createMany({
-    data: [
-      {
-        id: testUser.id,
-        email: testUser.email,
+  // Create test user and admin in database (handle duplicates gracefully)
+  try {
+    await prisma.user.createMany({
+      data: [
+        {
+          email: testUser.email,
+          passwordHash: 'hashedpassword',
+          role: testUser.role,
+        },
+        {
+          email: testAdmin.email,
+          passwordHash: 'hashedpassword',
+          role: testAdmin.role,
+        },
+      ],
+    });
+  } catch (error) {
+    // Users might already exist from previous test run
+    console.log('Users already exist, using existing users');
+    // Update existing users to ensure they have the right data
+    await prisma.user.updateMany({
+      where: {
+        email: {
+          in: [testUser.email, testAdmin.email],
+        },
+      },
+      data: {
         passwordHash: 'hashedpassword',
         role: testUser.role,
       },
-      {
-        id: testAdmin.id,
-        email: testAdmin.email,
-        passwordHash: 'hashedpassword',
-        role: testAdmin.role,
-      },
-    ],
-    skipDuplicates: true,
+    });
+  }
+
+  // Create test channel (handle duplicates gracefully)
+  try {
+    await prisma.channel.create({
+      data: testChannel,
+    });
+  } catch (error) {
+    // Channel might already exist from previous test run
+    console.log('Channel already exists, using existing channel');
+    console.log('Channel creation error:', error instanceof Error ? error.message : String(error));
+    console.log('Attempted channel data:', testChannel);
+  }
+
+  // Get the created channel (or existing one)
+  const channel = await prisma.channel.findUnique({
+    where: { slug: testChannel.slug },
   });
 
-  // Create test channel
-  await prisma.channel.create({
-    data: testChannel,
-    skipDuplicates: true,
-  });
+  // Ensure we have a created channel
+  if (!channel) {
+    console.error('Failed to create test channel');
+    throw new Error('Failed to create test channel');
+  }
 
   // Assign user to channel
-  await prisma.userChannel.create({
-    data: {
-      userId: testUser.id,
-      channelId: testChannel.id,
-    },
-    skipDuplicates: true,
+  try {
+    await prisma.userChannel.create({
+      data: {
+        userId: testUserId,
+        channelId: testChannelId,
+      },
+    });
+  } catch (error) {
+    // Assignment might already exist from previous test run
+    console.log('User-channel assignment already exists');
+    console.log('Error:', error instanceof Error ? error.message : String(error));
+  }
+
+  // Get created users from database to get their actual IDs
+  // Note: createMany doesn't return created records, so we need to find them
+  const createdUser = await prisma.user.findUnique({
+    where: { email: 'test@example.com' },
   });
 
-  // Generate JWT tokens
+  const createdAdmin = await prisma.user.findUnique({
+    where: { email: 'admin@example.com' },
+  });
+
+  // Ensure we have created users
+  if (!createdUser || !createdAdmin) {
+    console.error('Failed to create test users:', { createdUser, createdAdmin });
+    throw new Error('Failed to create test users');
+  }
+
+  // Store created user IDs for use in tests
+  testUserId = createdUser!.id;
+  testAdminId = createdAdmin!.id;
+  testChannelId = channel!.id;
+
+  // Generate JWT tokens with actual user IDs
   authToken = jwt.sign(
-    { id: testUser.id, email: testUser.email, role: testUser.role },
+    { id: testUserId, email: testUser.email, role: testUser.role },
     process.env.JWT_ACCESS_SECRET!,
     { expiresIn: '1h' }
   );
 
   adminToken = jwt.sign(
-    { id: testAdmin.id, email: testAdmin.email, role: testAdmin.role },
+    { id: testAdminId, email: testAdmin.email, role: testAdmin.role },
     process.env.JWT_ACCESS_SECRET!,
     { expiresIn: '1h' }
   );
@@ -90,21 +147,21 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // Clean up test data
+  // Clean up test data using stored IDs
   await prisma.userChannel.deleteMany({
-    where: { userId: { in: [testUser.id, testAdmin.id] } },
+    where: { userId: { in: [testUserId, testAdminId] } },
   });
   
   await prisma.file.deleteMany({
-    where: { channelId: testChannel.id },
+    where: { channelId: testChannelId },
   });
   
   await prisma.channel.delete({
-    where: { id: testChannel.id },
+    where: { id: testChannelId },
   });
   
   await prisma.user.deleteMany({
-    where: { id: { in: [testUser.id, testAdmin.id] } },
+    where: { id: { in: [testUserId, testAdminId] } },
   });
 
   // Clean up temp files
@@ -126,7 +183,7 @@ describe('File Upload API', () => {
           filename: 'test.txt',
           mimeType: 'text/plain',
           size: 1024,
-          channelId: testChannel.id,
+          channelId: testChannelId,
         });
 
       expect(response.status).toBe(201);
@@ -145,7 +202,7 @@ describe('File Upload API', () => {
           filename: 'test.txt',
           mimeType: 'text/plain',
           size: 1024,
-          channelId: testChannel.id,
+          channelId: testChannelId,
         });
 
       expect(response.status).toBe(401);
@@ -162,7 +219,7 @@ describe('File Upload API', () => {
           filename: 'test.exe',
           mimeType: 'application/x-executable',
           size: 1024,
-          channelId: testChannel.id,
+          channelId: testChannelId,
         });
 
       expect(response.status).toBe(400);
@@ -180,7 +237,7 @@ describe('File Upload API', () => {
           filename: 'large.bin',
           mimeType: 'application/octet-stream',
           size: 6 * 1024 * 1024 * 1024, // 6GB
-          channelId: testChannel.id,
+          channelId: testChannelId,
         });
 
       expect(response.status).toBe(400);
@@ -221,7 +278,7 @@ describe('File Upload API', () => {
           filename: 'test.txt',
           mimeType: 'text/plain',
           size: 1024,
-          channelId: testChannel.id,
+          channelId: testChannelId,
         });
 
       uploadId = response.body.data.uploadId;
@@ -265,7 +322,7 @@ describe('File Upload API', () => {
           filename: 'test.txt',
           mimeType: 'text/plain',
           size: 1024,
-          channelId: testChannel.id,
+          channelId: testChannelId,
         });
 
       uploadId = response.body.data.uploadId;
@@ -300,7 +357,7 @@ describe('File Upload API', () => {
     it('should return files for user with channel access', async () => {
       const response = await request(app)
         .get('/api/files')
-        .query({ channelId: testChannel.id, page: 1, limit: 20 })
+        .query({ channelId: testChannelId, page: 1, limit: 20 })
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
@@ -312,7 +369,7 @@ describe('File Upload API', () => {
     it('should allow admin to access files without channel assignment', async () => {
       const response = await request(app)
         .get('/api/files')
-        .query({ channelId: testChannel.id, page: 1, limit: 20 })
+        .query({ channelId: testChannelId, page: 1, limit: 20 })
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(response.status).toBe(200);
@@ -347,7 +404,7 @@ describe('File Upload API', () => {
       const response = await request(app)
         .get('/api/files/search')
         .query({
-          channelId: testChannel.id,
+          channelId: testChannelId,
           query: 'test',
           page: 1,
           limit: 20,
@@ -364,7 +421,7 @@ describe('File Upload API', () => {
       const response = await request(app)
         .get('/api/files/search')
         .query({
-          channelId: testChannel.id,
+          channelId: testChannelId,
           query: '',
           page: 1,
           limit: 20,
@@ -407,7 +464,7 @@ describe('File Validation', () => {
           filename: 'chunked.txt',
           mimeType: 'text/plain',
           size: 10 * 1024, // 10KB (2 chunks of 5KB each)
-          channelId: testChannel.id,
+          channelId: testChannelId,
         });
 
       uploadId = response.body.data.uploadId;
@@ -428,7 +485,7 @@ describe('File Validation', () => {
           totalSize: 10 * 1024,
           filename: 'chunked.txt',
           mimeType: 'text/plain',
-          channelId: testChannel.id,
+          channelId: testChannelId,
         });
 
       expect(response.status).toBe(400);
@@ -450,7 +507,7 @@ describe('File Validation', () => {
         .field('totalSize', 10 * 1024)
         .field('filename', 'chunked.txt')
         .field('mimeType', 'text/plain')
-        .field('channelId', testChannel.id)
+        .field('channelId', testChannelId)
         .attach('chunk', chunkData, 'chunk.bin');
 
       expect(response.status).toBe(400);
@@ -474,7 +531,7 @@ describe('Security scanning', () => {
         filename: 'eicar.txt',
         mimeType: 'text/plain',
         size: eicarBuffer.length,
-        channelId: testChannel.id,
+        channelId: testChannelId,
       });
 
     const uploadId = initResponse.body.data.uploadId;
@@ -491,7 +548,7 @@ describe('Security scanning', () => {
       .field('totalSize', eicarBuffer.length)
       .field('filename', 'eicar.txt')
       .field('mimeType', 'text/plain')
-      .field('channelId', testChannel.id)
+      .field('channelId', testChannelId)
       .attach('chunk', eicarBuffer, 'eicar.txt');
 
     expect(uploadResponse.status).toBe(400);
